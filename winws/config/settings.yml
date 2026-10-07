@@ -1,0 +1,255 @@
+﻿# ═══════════════════════════════════════════════════════════════
+#  ZAPRET MANAGER — settings.yml
+# ═══════════════════════════════════════════════════════════════
+#  Только zapret1 (winws.exe).
+# ═══════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════
+#  ПУТИ
+# ═══════════════════════════════════════════════════════════════
+WinwsPath:  "C:\Users\livxb\Desktop\zapret-discord-youtube-1.10.3\bin\winws.exe"
+
+TxtPath:    "C:\Users\livxb\Desktop\zapret-discord-youtube-1.10.3\lists"
+BinPath:    "C:\Users\livxb\Desktop\zapret-discord-youtube-1.10.3\bin"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ОСНОВНОЕ
+# ═══════════════════════════════════════════════════════════════
+Tool:               "auto"
+WarmupSec:          "3"
+TimeoutSec:         "4"
+MaxDomains:         "0"
+Hostlist:           "list-general.txt"
+HostlistExclude:    "list-exclude.txt"
+ResultFile:         "resultats/resultat.txt"
+ProgressFile:       "config/progress.xml"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ТЕСТИРОВАНИЕ
+# ═══════════════════════════════════════════════════════════════
+MinScore:           "1"
+MinScorePercent:    "0"
+TopN:               "20"
+TargetScore:        "0"
+AutoStopOnPerfect:  "True"
+KeepAllWorking:     "True"
+TestDepth:          "2"
+BinDepth:           "1"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  ПРЕ-ТЕСТ
+# ═══════════════════════════════════════════════════════════════
+BaselineCheckCount: "40"
+PreTestCount:       "0"
+PreTestPassScore:   "0"
+PreTestUrls:        ""
+PreTestAllDomains:  "False"
+RandomCount:        "0"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  FAKE PAYLOADS (.bin)
+# ═══════════════════════════════════════════════════════════════
+ForceBin:   "True"
+UseFakeTLS: "True"
+UseFakeQUIC: "True"
+UseFakeHTTP: "True"
+
+# ─── TLS clienthello ───
+FakeTLS_Google:       "tls_clienthello_www_google_com.bin"
+FakeTLS_Google2:      "tls_clienthello_sochi_park.bin"
+FakeTLS_4PDA:         "tls_clienthello_4pda_to.bin"
+FakeTLS_MaxRu:        "tls_clienthello_max_ru.bin"
+FakeTLS_Sferum:       "tls_clienthello_www_sferum_ru.bin"
+FakeTLS_5ka:          "tls_clienthello_5ka_ru.bin"
+
+# ─── QUIC initial ───
+FakeQUIC_Google:      "quic_initial_www_google_com.bin"
+FakeQUIC_Discord:     "quic_initial_discord_com.bin"
+FakeQUIC_4PDA:        "quic_initial_4pda_to.bin"
+FakeQUIC_Rutube:      "quic_initial_rutube_ru.bin"
+FakeQUIC_Steam:       "quic_initial_steamcommunity_com.bin"
+FakeQUIC_Tencent:     "quic_initial_tencent_com.bin"
+FakeQUIC_5ka:         "quic_initial_5ka_ru.bin"
+
+# ─── STUN / UDP ───
+FakeUDP_STUN:         "stun.bin"
+FakeUDP_STUN2:        "stun2.bin"
+FakeUDP_Game:         "ACTIVE_GAME_UDP.bin"
+FakeUDP_Discord:      "ACTIVE_DISCORD_UDP.bin"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  METHODS / FAKES (zapret1)
+# ═══════════════════════════════════════════════════════════════
+
+# ─── Основные методы ───
+Method_fake:            "fake"
+Method_fakeknown:       "fakeknown"
+Method_synack:          "synack"
+Method_rst:             "rst"
+Method_rstack:          "rstack"
+Method_hopbyhop:        "hopbyhop"
+Method_destopt:         "destopt"
+Method_ipfrag1:         "ipfrag1"
+Method_ipfrag2:         "ipfrag2"
+Method_multisplit:      "multisplit"
+Method_multidisorder:   "multidisorder"
+Method_fakedsplit:      "fakedsplit"
+Method_fakeddisorder:   "fakeddisorder"
+Method_udplen:          "udplen"
+Method_tamper:          "tamper"
+Method_syndata:         "syndata"
+Method_oob:             "oob"
+Method_hostfakesplit:   "hostfakesplit"
+
+# ─── Алиасы v1 ───
+Method_split:           "split"
+Method_split2:          "split2"
+Method_disorder:        "disorder"
+Method_disorder2:       "disorder2"
+
+# ─── Комбинированные ───
+Method_fake_split:      "fake,split"
+Method_fake_multisplit: "fake,multisplit"
+Method_fake_fakedsplit: "fake,fakedsplit"
+Method_syndata_fake_fakedsplit: "syndata,fake,fakedsplit"
+
+# ─── Позиции разбиения ───
+SplitPos_1:        "1"
+SplitPos_2:        "2"
+SplitPos_3:        "3"
+SplitPos_4:        "4"
+SplitPos_5:        "5"
+SplitPos_midsld:   "midsld"
+SplitPos_1_2:      "1+2"
+SplitPos_1_midsld: "1+midsld"
+SplitPos_2_midsld: "2+midsld"
+SplitPos_method:   "method"
+SplitPos_host:     "host"
+SplitPos_endhost:  "endhost"
+SplitPos_sld:      "sld"
+SplitPos_endsld:   "endsld"
+SplitPos_sniext:   "sniext"
+
+# ─── Fooling (обманки) ───
+Fooling_ts:        "ts"
+Fooling_badseq:    "badseq"
+Fooling_badsum:    "badsum"
+Fooling_md5sig:    "md5sig"
+Fooling_hopbyhop:  "hopbyhop"
+Fooling_hopbyhop2: "hopbyhop2"
+Fooling_destopt:   "destopt"
+Fooling_datanoack: "datanoack"
+Fooling_ts_badseq: "ts,badseq"
+Fooling_ts_md5sig: "ts,md5sig"
+Fooling_badseq_md5sig: "badseq,md5sig"
+
+# ─── Autottl ───
+Autottl_0:  ""
+Autottl_1:  "1"
+Autottl_2:  "2"
+Autottl_3:  "3"
+Autottl_4:  "4"
+Autottl_5:  "5"
+Autottl_6:  "6"
+Autottl_8:  "8"
+Autottl_10: "10"
+Autottl_12: "12"
+Autottl_16: "16"
+Autottl_24: "24"
+Autottl_32: "32"
+
+# ─── Repeats ───
+Repeats_1:  "1"
+Repeats_2:  "2"
+Repeats_3:  "3"
+Repeats_4:  "4"
+Repeats_6:  "6"
+Repeats_8:  "8"
+Repeats_10: "10"
+Repeats_12: "12"
+
+# ─── Cutoff ───
+Cutoff_n1:   "n1"
+Cutoff_n2:   "n2"
+Cutoff_n3:   "n3"
+Cutoff_n4:   "n4"
+Cutoff_n6:   "n6"
+Cutoff_n8:   "n8"
+Cutoff_n10:  "n10"
+Cutoff_d512:  "d512"
+Cutoff_d1024: "d1024"
+Cutoff_d2048: "d2048"
+
+# ─── SplitSeqovl ───
+SplitSeqovl_681:  "681"
+SplitSeqovl_664:  "664"
+SplitSeqovl_568:  "568"
+SplitSeqovl_0:    "0"
+SplitSeqovlPattern_Google: "tls_clienthello_www_google_com.bin"
+SplitSeqovlPattern_4PDA:   "tls_clienthello_4pda_to.bin"
+SplitSeqovlPattern_STUN:   "stun2.bin"
+SplitSeqovlPattern_MaxRu:  "tls_clienthello_max_ru.bin"
+
+# ─── Hostfakesplit ───
+Hostfakesplit_Host_Google:  "host=www.google.com"
+Hostfakesplit_Host_Ya:      "host=ya.ru"
+Hostfakesplit_Host_Discord: "host=discord.com"
+Hostfakesplit_AltOrder:     "altorder=1"
+
+# ─── Fakedsplit patterns ───
+FakedsplitPattern_0x00: "0x00"
+FakedsplitPattern_0x16: "0x16"
+FakedsplitPattern_0x01: "0x01"
+
+# ─── WinDivert фильтры ───
+WfTcp:               "80,443"
+WfUdp:               "443,50000-65535,25565,19132"
+FilterL7:            ""
+WfIface:             "0"
+WfL3:                "ipv4"
+UseIpsetExclude:     "True"
+UseHostlistExclude:  "True"
+#Debug: "False"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  DNS SERVERS (UDP)
+# ═══════════════════════════════════════════════════════════════
+DnsTestDomain: "youtube.com"
+
+Dns_Cloudflare1:    "1.1.1.1"
+Dns_Cloudflare2:    "1.0.0.1"
+Dns_Google1:        "8.8.8.8"
+Dns_Google2:        "8.8.4.4"
+Dns_Quad9_1:        "9.9.9.9"
+Dns_Quad9_2:        "149.112.112.112"
+Dns_AdGuard1:       "94.140.14.14"
+Dns_AdGuard2:       "94.140.15.15"
+Dns_AdGuardFamily3: "94.140.14.15"
+Dns_OpenDNS1:       "208.67.222.222"
+Dns_OpenDNS2:       "208.67.220.220"
+Dns_Yandex1:        "77.88.8.8"
+Dns_Yandex2:        "77.88.8.1"
+Dns_Xbox1:          "176.103.130.130"
+Dns_Xbox2:          "176.103.130.131"
+
+
+# ═══════════════════════════════════════════════════════════════
+#  DNS-over-HTTPS (DoH)
+# ═══════════════════════════════════════════════════════════════
+DohTestDomain: "youtube.com"
+
+Doh_Google:      "https://dns.google/dns-query"
+Doh_Cloudflare:  "https://cloudflare-dns.com/dns-query"
+Doh_AdGuard:     "https://dns.adguard-dns.com/dns-query"
+Doh_AdGuardFam:  "https://family.adguard-dns.com/dns-query"
+Doh_AdGuardUnf:  "https://unfiltered.adguard-dns.com/dns-query"
+Doh_Quad9:       "https://dns.quad9.net/dns-query"
+Doh_OpenDNS:     "https://doh.opendns.com/dns-query"
+Doh_Yandex:      "https://dns.yandex.ru/dns-query"
+Doh_Xbox:        "https://xbox-dns.ru/dns-query"

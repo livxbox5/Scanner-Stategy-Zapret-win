@@ -1,0 +1,43 @@
+us/
+  winws/ - Одельно winws папка
+  config/
+    settings.yml
+   modules/
+     Convert.ps1
+     Core.ps1
+     Dns.ps1
+     DnsDoH.ps1
+     FileScanner.ps1
+     Launcher.ps1
+     Provider.ps1
+     Settings.ps1
+     StrategyTester.ps1
+     Verify.ps1  
+  resoultats/
+   fix-excoding.ps1
+   start.bat
+   startegies.bat
+   ZapretManager.ps1
+  winws2/ - Одельно winws2 папка
+
+us/
+  winws2/ - Одельно winws2 папка
+   config/
+    settings.yml
+   modules/
+     Convert.ps1
+     Core.ps1
+     Dns.ps1
+     DnsDoH.ps1
+     FileScanner.ps1
+     Launcher.ps1
+     Provider.ps1
+     Settings.ps1
+     StrategyTester.ps1
+     Verify.ps1  
+  resoultats/
+   fix-excoding.ps1
+   start.bat
+   startegies.bat
+   ZapretManager.ps1
+  winws2/ - Одельно winws2 папка
