@@ -7,16 +7,13 @@
 #    Get-Winws2LuaInit            — сборка --lua-init=@...
 #    Get-Winws2BlobDefs           — сборка --blob=имя:@путь
 #    New-Winws2StrategyCandidates — генерация Lua-стратегий
+#                                   (с поддержкой ФОКУСА по провайдеру)
 # ===============================================================
 
-
-# === RESOLVE-WINWS2LUAPATH ===
-# Принимает путь: либо .lua-файл, либо каталог.
-# Возвращает полный путь к файлу или $null.
 function Resolve-Winws2LuaPath {
     param(
         [string]$Path,
-        [string]$TargetName    # 'zapret-lib.lua' / 'zapret-antidpi.lua'
+        [string]$TargetName
     )
 
     if (-not $Path) { return $null }
@@ -30,13 +27,11 @@ function Resolve-Winws2LuaPath {
     if (-not $item) { return $null }
 
     if ($item.PSIsContainer) {
-        # Это каталог — ищем файл внутри
         $candidate = Join-Path $item.FullName $TargetName
         if (Test-Path $candidate) { return (Get-Item $candidate).FullName }
         return $null
     }
 
-    # Это файл — проверяем имя
     if ($item.Name -ieq $TargetName) { return $item.FullName }
     return $null
 }
@@ -86,7 +81,6 @@ function Test-Winws2Ready {
         if (-not (Test-Path (Join-Path $dir 'WinDivert.dll'))) { $issues += "Нет WinDivert.dll" }
     }
 
-    # Пробуем развернуть оба пути к реальным .lua-файлам
     $libFile  = Resolve-Winws2LuaPath -Path $LuaLib     -TargetName 'zapret-lib.lua'
     $antiFile = Resolve-Winws2LuaPath -Path $LuaAntiDpi -TargetName 'zapret-antidpi.lua'
 
@@ -94,8 +88,8 @@ function Test-Winws2Ready {
     if (-not $antiFile) { $issues += "Не найден zapret-antidpi.lua (путь: $LuaAntiDpi)" }
 
     return [pscustomobject]@{
-        Ready  = ($issues.Count -eq 0)
-        Issues = $issues
+        Ready    = ($issues.Count -eq 0)
+        Issues   = $issues
         LibFile  = $libFile
         AntiFile = $antiFile
     }
@@ -116,9 +110,6 @@ function Get-Winws2LuaInit {
     return ($parts -join ' ')
 }
 
-# Имена blob-ов в winws2 должны быть валидными идентификаторами:
-# первая буква/знак_подчёркивания, далее буквы/цифры/_
-# 4PDA → B4PDA, 5ka → B5ka, quic-5ka → quic_5ka
 function Get-SafeBlobName {
     param([string]$Name)
     if (-not $Name) { return $Name }
@@ -147,6 +138,57 @@ function Get-Winws2BlobDefs {
     return ($defs -join ' ')
 }
 
+function Get-Winws2FoolSuffix {
+    param([string[]]$Exclude = @())
+
+    if (-not $Global:ZapretState.LuaFool -or $Global:ZapretState.LuaFool.Count -eq 0) { return '' }
+
+    $parts = @()
+    foreach ($name in $Global:ZapretState.LuaFool.Keys) {
+        if ($Exclude -contains $name) { continue }
+        $val = [string]$Global:ZapretState.LuaFool[$name]
+        if ($val) { $parts += $val }
+    }
+    if ($parts.Count -eq 0) { return '' }
+    return ':' + ($parts -join ':')
+}
+
+function Get-Winws2GlobalExtras {
+    if (-not $Global:ZapretState.Glob -or $Global:ZapretState.Glob.Count -eq 0) { return '' }
+
+    $parts = @()
+
+    if ($Global:ZapretState.Glob.ContainsKey('intercept')) {
+        $v = [string]$Global:ZapretState.Glob['intercept']
+        if ($v -ne '') { $parts += "--intercept=$v" }
+    }
+
+    if ($Global:ZapretState.Glob.ContainsKey('wf_raw_filter')) {
+        $v = [string]$Global:ZapretState.Glob['wf_raw_filter']
+        if ($v -ne '') { $parts += "--wf-raw-filter=`"$v`"" }
+    }
+
+    if ($Global:ZapretState.Glob.ContainsKey('qnum')) {
+        $v = [string]$Global:ZapretState.Glob['qnum']
+        if ($v -ne '') { $parts += "--qnum=$v" }
+    }
+
+    if ($Global:ZapretState.Glob.ContainsKey('reasm')) {
+        $v = [string]$Global:ZapretState.Glob['reasm']
+        if ($v -ne '') { $parts += "--reasm" }
+    }
+
+    if ($Global:ZapretState.Glob.ContainsKey('reasm_max')) {
+        $v = [string]$Global:ZapretState.Glob['reasm_max']
+        if ($v -ne '') { $parts += "--reasm-max=$v" }
+    }
+
+    return ($parts -join ' ')
+}
+
+# ============================================================================
+#  Генерация стратегий — с ФОКУСОМ по провайдеру
+# ============================================================================
 function New-Winws2StrategyCandidates {
     param([string]$TxtDir = $Global:ZapretState.TxtPath)
 
@@ -159,13 +201,12 @@ function New-Winws2StrategyCandidates {
 
     $luaInit  = Get-Winws2LuaInit
     $blobDefs = Get-Winws2BlobDefs
+    $foolSuf  = Get-Winws2FoolSuffix
+    $globExt  = Get-Winws2GlobalExtras
 
-    # Глобальная часть: перехват + lua-init + blob-регистрация
-    # ВАЖНО: --ctrack НЕ добавляем — в этой сборке такого флага нет.
     $wf = "--wf-tcp-out=443 --wf-tcp-in=443 --wf-udp-out=443 --wf-udp-in=443"
-    $globalPart = "$wf $luaInit $blobDefs".Trim()
+    $globalPart = "$wf $luaInit $blobDefs $globExt".Trim()
 
-    # hostlist/hostlist-exclude идут как ПРОФИЛЬНЫЕ фильтры
     $hl = ""; $he = ""
     if ($TxtDir -and (Test-Path $TxtDir)) {
         foreach ($name in @($Global:ZapretState.Hostlist, 'list-general.txt') | Select-Object -Unique) {
@@ -178,7 +219,13 @@ function New-Winws2StrategyCandidates {
         }
     }
 
-    # ─── Собираем blob'ы (СЫРЫЕ имена — для method-строки) ───
+    # ─── Фокус провайдера (из Provider.ps1) ───
+    $focus = $null
+    if (Get-Command Get-ProviderFocusParams -ErrorAction SilentlyContinue) {
+        $focus = Get-ProviderFocusParams
+    }
+
+    # ─── Собираем blob'ы ───
     $tlsBlobs  = @()
     $quicBlobs = @()
 
@@ -192,29 +239,34 @@ function New-Winws2StrategyCandidates {
     if ($tlsBlobs.Count  -eq 0) { $tlsBlobs  = @('fake_default_tls')  }
     if ($quicBlobs.Count -eq 0) { $quicBlobs = @('fake_default_quic') }
 
-    # ─── Списки для перебора ───
-    $splits = @(
-        '1', '2', 'midsld',
-        'method+2',
-        'sniext+1',
-        'host',
-        'host+1',
-        'endhost',
-        'endhost-1',
-        'midsld-2', 'midsld+2',
-        '1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
-    )
+    # ─── Фокус: фильтруем blob'ы по списку файлов провайдера ───
+    if ($focus -and $focus.BlobFiles.Count -gt 0) {
+        $tlsFocused  = @($tlsBlobs  | Where-Object { $focus.BlobFiles -contains $Global:ZapretState.LuaBlobFileMap[$_] })
+        $quicFocused = @($quicBlobs | Where-Object { $focus.BlobFiles -contains $Global:ZapretState.LuaBlobFileMap[$_] })
+        if ($tlsFocused.Count)  { $tlsBlobs  = $tlsFocused }
+        if ($quicFocused.Count) { $quicBlobs = $quicFocused }
+    }
 
-    $repeats = @('repeats=1','repeats=2','repeats=4','repeats=6','repeats=8')
-
-    $tlsMods = @(
-        'rnd',
-        'rnd,rndsni',
-        'rnd,dupsid',
-        'rnd,dupsid,rndsni',
-        'sni=www.google.com',
-        'sni=ya.ru'
-    )
+    # ─── Списки для перебора: фокус или дефолт ───
+    if ($focus) {
+        $splits  = if ($focus.Splits.Count)  { $focus.Splits }  else { @('1','2','midsld','sniext+1') }
+        $repeats = if ($focus.Repeats.Count) { $focus.Repeats } else { @('repeats=2','repeats=4','repeats=6') }
+        $tlsMods = if ($focus.TlsMods.Count) { $focus.TlsMods } else { @('rnd','rnd,rndsni') }
+        Write-Log ("[winws2] ФОКУС '{0}': {1} split × {2} repeat × {3} tlsmod × {4} blob" -f `
+            $focus.Profile, $splits.Count, $repeats.Count, $tlsMods.Count, ($tlsBlobs.Count + $quicBlobs.Count)) "INFO"
+    } else {
+        $splits = @(
+            '1','2','midsld','method+2','sniext+1','host','host+1','endhost','endhost-1',
+            'midsld-2','midsld+2',
+            '1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1'
+        )
+        $repeats = @('repeats=1','repeats=2','repeats=4','repeats=6','repeats=8')
+        $tlsMods = @(
+            'rnd','rnd,rndsni','rnd,dupsid','rnd,dupsid,rndsni',
+            'sni=www.google.com','sni=ya.ru'
+        )
+        Write-Log "[winws2] Провайдер не задан — ПОЛНЫЙ перебор" "WARN"
+    }
 
     $acc = New-Object System.Collections.ArrayList
 
@@ -224,8 +276,8 @@ function New-Winws2StrategyCandidates {
         foreach ($sp in $splits) {
             foreach ($rep in $repeats) {
                 foreach ($tm in $tlsMods) {
-                    $fakeParams = "fake:blob=$blob`:tls_mod=$tm`:$rep"
-                    $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=$fakeParams --lua-desync=multisplit`:pos=$sp"
+                    $fakeParams = "fake:blob=$blob`:tls_mod=$tm`:$rep$foolSuf"
+                    $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=$fakeParams --lua-desync=multisplit`:pos=$sp$foolSuf"
                     $method = "fake(blob=$blobRaw,$rep,tls_mod=$tm)+multisplit($sp)"
                     [void]$acc.Add([pscustomobject]@{ Method = $method; Line = $line })
                 }
@@ -238,8 +290,8 @@ function New-Winws2StrategyCandidates {
         $blob = Get-SafeBlobName $blobRaw
         foreach ($sp in $splits) {
             foreach ($rep in $repeats) {
-                $fakeParams = "fake:blob=$blob`:$rep"
-                $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=$fakeParams --lua-desync=multidisorder`:pos=$sp"
+                $fakeParams = "fake:blob=$blob`:$rep$foolSuf"
+                $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=$fakeParams --lua-desync=multidisorder`:pos=$sp$foolSuf"
                 $method = "fake(blob=$blobRaw,$rep)+multidisorder($sp)"
                 [void]$acc.Add([pscustomobject]@{ Method = $method; Line = $line })
             }
@@ -248,15 +300,16 @@ function New-Winws2StrategyCandidates {
 
     # ─── 3. hostfakesplit (TCP/TLS) ───
     foreach ($hname in @('www.google.com','discord.com','www.youtube.com')) {
-        $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=hostfakesplit`:host=$hname`:altorder=1"
+        $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=hostfakesplit`:host=$hname`:altorder=1$foolSuf"
         [void]$acc.Add([pscustomobject]@{ Method = "hostfakesplit(host=$hname)"; Line = $line })
     }
 
     # ─── 4. fakeddisorder (TCP/TLS) ───
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
-        foreach ($sp in @('1','2','midsld','host','sniext+1')) {
-            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fakeddisorder`:blob=$blob`:pos=$sp"
+        $spots = if ($focus) { @($splits | Select-Object -First 5) } else { @('1','2','midsld','host','sniext+1') }
+        foreach ($sp in $spots) {
+            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fakeddisorder`:blob=$blob`:pos=$sp$foolSuf"
             [void]$acc.Add([pscustomobject]@{ Method = "fakeddisorder(blob=$blobRaw,$sp)"; Line = $line })
         }
     }
@@ -264,15 +317,16 @@ function New-Winws2StrategyCandidates {
     # ─── 5. fake + syndata (TCP/TLS) ───
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
-        $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=2 --lua-desync=syndata"
+        $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=2$foolSuf --lua-desync=syndata$foolSuf"
         [void]$acc.Add([pscustomobject]@{ Method = "fake(blob=$blobRaw)+syndata"; Line = $line })
     }
 
     # ─── 6. fake для QUIC (UDP) ───
     foreach ($blobRaw in $quicBlobs) {
         $blob = Get-SafeBlobName $blobRaw
-        foreach ($rep in @('repeats=2','repeats=4','repeats=6','repeats=8','repeats=11')) {
-            $line = "$globalPart --filter-udp=443 --filter-l7=quic$hl$he --payload=known --lua-desync=fake`:blob=$blob`:$rep"
+        $quicReps = if ($focus) { @($repeats | Select-Object -First 3) } else { @('repeats=2','repeats=4','repeats=6','repeats=8','repeats=11') }
+        foreach ($rep in $quicReps) {
+            $line = "$globalPart --filter-udp=443 --filter-l7=quic$hl$he --payload=known --lua-desync=fake`:blob=$blob`:$rep$foolSuf"
             [void]$acc.Add([pscustomobject]@{ Method = "quic_fake(blob=$blobRaw,$rep)"; Line = $line })
         }
     }
@@ -281,15 +335,16 @@ function New-Winws2StrategyCandidates {
     $stunBlobs = @($Global:ZapretState.LuaBlobFiles | Where-Object { $Global:ZapretState.LuaBlobFileMap[$_] -match 'stun' })
     foreach ($blobRaw in $stunBlobs) {
         $blob = Get-SafeBlobName $blobRaw
-        $line = "$globalPart --filter-udp=3478,5349 --filter-l7=stun$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=4"
+        $line = "$globalPart --filter-udp=3478,5349 --filter-l7=stun$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=4$foolSuf"
         [void]$acc.Add([pscustomobject]@{ Method = "stun_fake(blob=$blobRaw)"; Line = $line })
     }
 
     # ─── 8. fake + fakeddisorder (комбо) ───
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
-        foreach ($sp in @('midsld','sniext+1')) {
-            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=2 --lua-desync=fakeddisorder`:pos=$sp"
+        $spots = if ($focus) { @($splits | Select-Object -First 2) } else { @('midsld','sniext+1') }
+        foreach ($sp in $spots) {
+            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=known --lua-desync=fake`:blob=$blob`:repeats=2$foolSuf --lua-desync=fakeddisorder`:pos=$sp$foolSuf"
             [void]$acc.Add([pscustomobject]@{ Method = "fake(blob=$blobRaw)+fakeddisorder($sp)"; Line = $line })
         }
     }
@@ -302,7 +357,8 @@ function New-Winws2StrategyCandidates {
         if ([int]::TryParse("$rawRc", [ref]$parsed)) { $randomCount = $parsed }
     }
 
-    Write-Log ("[winws2] Сгенерировано {0} стратегий (RandomCount={1})" -f $totalGenerated, $randomCount) "INFO"
+    $mode = if ($focus) { "ФОКУС($($focus.Profile))" } else { "ПОЛНЫЙ" }
+    Write-Log ("[winws2] {0}: сгенерировано {1} стратегий (RandomCount={2})" -f $mode, $totalGenerated, $randomCount) "INFO"
 
     if ($randomCount -gt 0 -and $totalGenerated -gt $randomCount) {
         return @($acc.ToArray() | Get-Random -Count $randomCount)

@@ -1,0 +1,34 @@
+# Discord Domains
+# Core & Website
+discord.com
+discordapp.com
+discord.gg
+discord.co
+discord.design
+discord.dev
+discord.gift
+discord.gifts
+discord.media
+discord.new
+discord.store
+discord.tools
+dis.gd
+
+# CDN & Media
+cdn.discordapp.com
+media.discordapp.net
+discordcdn.com
+
+# Activities & Other
+discord-activities.com
+discordactivities.com
+discordsays.com
+discordmerch.com
+discordpartygames.com
+discordstatus.com
+
+# Voice / Gateway
+gateway.discord.gg
+updates.discord.com
+
+# Note: Domain suffixes like ".discord.gg" are used for voice server regions (e.g., region1.discord.gg).

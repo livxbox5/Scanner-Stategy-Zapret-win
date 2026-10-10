@@ -1,0 +1,26 @@
+# WhatsApp Domains
+# Main Website
+whatsapp.com
+www.whatsapp.com
+web.whatsapp.com
+business.whatsapp.com
+faq.whatsapp.com
+chat.whatsapp.com
+
+# Technical & API
+whatsapp.net
+graph.whatsapp.com
+graph.whatsapp.net
+mmg.whatsapp.net
+pps.whatsapp.net
+crashlogs.whatsapp.net
+static.whatsapp.net
+dit.whatsapp.net
+
+# CDN
+cdn.whatsapp.net
+media-iad3-1.cdn.whatsapp.net
+media-iad3-2.cdn.whatsapp.net
+
+# Short Links
+wa.me

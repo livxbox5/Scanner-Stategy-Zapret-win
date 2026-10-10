@@ -3,6 +3,10 @@
 # ===============================================================
 #  Ядро: состояние $Global:ZapretState, загрузка/сохранение settings.yml,
 #  конвертеры (Int, Bool), YAML-парсер, Write-Log.
+#
+#  ВАЖНО: Save-Settings теперь НЕ перезаписывает settings.yml целиком.
+#  Он обновляет только значения конкретных ключей, сохраняя
+#  комментарии, порядок, отступы и всё, что дописано руками.
 # ===============================================================
 
 $configPath = Join-Path $PSScriptRoot '..\config\settings.yml'
@@ -34,6 +38,9 @@ $Global:ZapretState = @{
     AutoStopOnPerfect = $true
     KeepAllWorking    = $true
 
+    # ─── Провайдер ───
+    ProviderProfile   = ""
+
     # ─── Lua-методы ───
     LuaMethods        = @()
 
@@ -41,6 +48,12 @@ $Global:ZapretState = @{
     LuaBlobs          = @()
     LuaBlobFiles      = @()
     LuaBlobFileMap    = @{}
+
+    # ─── Fooling-параметры (LuaFool_*) ───
+    LuaFool           = @{}
+
+    # ─── Глобальные опции (Glob_*) ───
+    Glob              = @{}
 
     # ─── DNS / DoH ───
     DnsServers        = @()
@@ -81,8 +94,6 @@ function Get-Winws2Dir {
 function Get-ProcName { return 'winws2' }
 
 # === YAML PARSER ===
-# Улучшенный парсер: корректно обрабатывает inline-комментарии только
-# если перед # есть пробел, и предупреждает о дублях ключей.
 function ConvertFrom-SimpleYaml {
     param([string]$Raw)
 
@@ -91,7 +102,6 @@ function ConvertFrom-SimpleYaml {
 
     foreach ($line in ($Raw -split "`r?`n")) {
         $lineNo++
-        # Убираем inline-комментарии: # только если перед ним пробел/начало строки
         $line = $line -replace '(^|\s)#.*$','$1'
         $trim = $line.Trim()
         if ($trim -eq "") { continue }
@@ -101,7 +111,6 @@ function ConvertFrom-SimpleYaml {
         $key   = $Matches[1].Trim()
         $value = $Matches[2].Trim()
 
-        # Убираем кавычки
         if ($value.Length -ge 2) {
             if (($value.StartsWith('"') -and $value.EndsWith('"')) -or
                 ($value.StartsWith("'") -and $value.EndsWith("'"))) {
@@ -128,6 +137,104 @@ function ConvertTo-SimpleYaml {
         [void]$sb.AppendLine("${k}: `"$v`"")
     }
     return $sb.ToString()
+}
+
+# ============================================================================
+#  УМНОЕ ОБНОВЛЕНИЕ settings.yml (сохраняет комментарии и структуру)
+# ============================================================================
+
+# Обновить/добавить ОДИН ключ, сохранив остальные строки файла как есть.
+function Set-YamlValue {
+    param(
+        [string]$File,
+        [string]$Key,
+        [string]$Value
+    )
+
+    if (-not (Test-Path $File)) {
+        [System.IO.File]::WriteAllText($File, "", [Text.UTF8Encoding]::new($true))
+    }
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.AddRange([System.IO.File]::ReadAllLines($File, [Text.Encoding]::UTF8))
+
+    $escaped = [regex]::Escape($Key)
+    $found = $false
+
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match "^(\s*)$escaped(\s*):") {
+            $prefix = $Matches[1]
+            $lines[$i] = "$prefix$Key`: `"$Value`""
+            $found = $true
+            break
+        }
+    }
+
+    if (-not $found) {
+        # ключа не было — добавим в конец файла
+        # (сначала пустая строка для разделения, если файл не пуст)
+        if ($lines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($lines[$lines.Count - 1])) {
+            $lines.Add("")
+        }
+        $lines.Add("$Key`: `"$Value`"")
+    }
+
+    [System.IO.File]::WriteAllLines($File, $lines.ToArray(), [Text.UTF8Encoding]::new($true))
+}
+
+# Заменить ВСЕ ключи с указанным префиксом (например, "LuaBlobFile_",
+# "Dns_", "Doh_"). Сохраняет позицию первого такого ключа в файле.
+function Set-YamlSection {
+    param(
+        [string]$File,
+        [string]$Prefix,
+        [string[]]$NewLines = @()
+    )
+
+    if (-not (Test-Path $File)) { return }
+    if ($NewLines -eq $null) { $NewLines = @() }
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.AddRange([System.IO.File]::ReadAllLines($File, [Text.Encoding]::UTF8))
+
+    $escaped = [regex]::Escape($Prefix)
+    $pattern = "^${escaped}[A-Za-z0-9_]*\s*:"
+
+    $firstIdx = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match $pattern) {
+            if ($firstIdx -lt 0) { $firstIdx = $i }
+        }
+    }
+
+    $newList = New-Object System.Collections.Generic.List[string]
+    foreach ($l in $lines) {
+        if ($l -match $pattern) { continue }
+        $newList.Add($l)
+    }
+
+    # свернём 3+ пустых строк подряд в одну
+    $compact = New-Object System.Collections.Generic.List[string]
+    $prevEmpty = $false
+    foreach ($l in $newList) {
+        $isEmpty = [string]::IsNullOrWhiteSpace($l)
+        if ($isEmpty -and $prevEmpty) { continue }
+        $compact.Add($l)
+        $prevEmpty = $isEmpty
+    }
+
+    if ($NewLines.Count -gt 0) {
+        if ($firstIdx -ge 0 -and $firstIdx -le $compact.Count) {
+            $compact.InsertRange($firstIdx, [string[]]$NewLines)
+        } else {
+            if ($compact.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($compact[$compact.Count - 1])) {
+                $compact.Add("")
+            }
+            foreach ($nl in $NewLines) { $compact.Add($nl) }
+        }
+    }
+
+    [System.IO.File]::WriteAllLines($File, $compact.ToArray(), [Text.UTF8Encoding]::new($true))
 }
 
 # === CONVERTERS ===
@@ -157,6 +264,74 @@ function Get-YamlValue {
     return $null
 }
 
+# ============================================================================
+#  АВТО-СКАНИРОВАНИЕ .bin в папке BinPath
+# ============================================================================
+function Update-Winws2BlobFiles {
+    $binDir = [string]$Global:ZapretState.BinPath
+    if (-not $binDir -or -not (Test-Path -LiteralPath $binDir)) {
+        return [pscustomobject]@{ Removed = 0; Added = 0; Total = 0; Skipped = $true }
+    }
+
+    $keepNames = New-Object System.Collections.Generic.List[string]
+    $keepMap   = @{}
+    $removed   = 0
+    foreach ($name in $Global:ZapretState.LuaBlobFiles) {
+        $fileName = $Global:ZapretState.LuaBlobFileMap[$name]
+        if (-not $fileName) { continue }
+        $fullPath = Join-Path $binDir $fileName
+        if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+            $keepNames.Add($name)
+            $keepMap[$name] = $fileName
+        } else {
+            $removed++
+        }
+    }
+
+    $existingFileNames = @($keepMap.Values)
+    $added = 0
+    foreach ($f in @(Get-ChildItem -LiteralPath $binDir -Filter '*.bin' -File -ErrorAction SilentlyContinue)) {
+        if ($existingFileNames -contains $f.Name) { continue }
+
+        $baseName = [IO.Path]::GetFileNameWithoutExtension($f.Name)
+        $key = ($baseName -replace '[^A-Za-z0-9_]', '_')
+        if ($key -match '^\d') { $key = "B$key" }
+
+        $suffix = 1
+        $originalKey = $key
+        while ($keepMap.ContainsKey($key)) {
+            $key = "$originalKey`_$suffix"
+            $suffix++
+        }
+
+        $keepNames.Add($key)
+        $keepMap[$key] = $f.Name
+        $added++
+    }
+
+    $Global:ZapretState.LuaBlobFiles   = @($keepNames)
+    $Global:ZapretState.LuaBlobFileMap = $keepMap
+
+    return [pscustomobject]@{
+        Removed = $removed
+        Added   = $added
+        Total   = $keepNames.Count
+        Skipped = $false
+    }
+}
+
+# ============================================================================
+#  АВТО-СКАНИРОВАНИЕ .lua
+# ============================================================================
+function Get-AllLuaScripts {
+    $libPath = [string]$Global:ZapretState.LuaLibPath
+    if (-not $libPath) { return @() }
+    $dir = Split-Path $libPath -Parent
+    if (-not $dir -or -not (Test-Path -LiteralPath $dir)) { return @() }
+    return @(Get-ChildItem -LiteralPath $dir -Filter '*.lua' -File -ErrorAction SilentlyContinue |
+             Select-Object -ExpandProperty FullName)
+}
+
 # === Import-Settings ===
 function Import-Settings {
     $file = $Global:ZapretState.ConfigFile
@@ -181,6 +356,23 @@ function Import-Settings {
     if ($keyCount -eq 0) {
         Write-Host "  [!] Парсер вернул 0 ключей" -ForegroundColor Yellow
         return
+    }
+
+    # ─── Читаем methods.yml (если есть) и мержим в $data ───
+    $methodsFile = Join-Path (Split-Path $file -Parent) 'methods.yml'
+    if (Test-Path $methodsFile) {
+        try {
+            $mRaw = [System.IO.File]::ReadAllText($methodsFile, [System.Text.Encoding]::UTF8)
+            $mData = ConvertFrom-SimpleYaml $mRaw
+            foreach ($k in $mData.Keys) {
+                $data[$k] = $mData[$k]     # methods.yml имеет приоритет над settings.yml
+            }
+            Write-Host ("  methods.yml: {0} ключей (приоритет над settings.yml)" -f $mData.Keys.Count) -ForegroundColor DarkCyan
+        } catch {
+            Write-Host ("  [!] Ошибка чтения methods.yml: {0}" -f $_) -ForegroundColor Red
+        }
+    } else {
+        Write-Host "  methods.yml не найден — читаю только settings.yml" -ForegroundColor DarkGray
     }
 
     # ─── Пути ───
@@ -212,6 +404,9 @@ function Import-Settings {
     $v = Get-YamlValue $data 'ProgressFile';   if ($v) { $Global:ZapretState.ProgressFile = [string]$v }
     $v = Get-YamlValue $data 'Hostlist';       if ($v) { $Global:ZapretState.Hostlist = [string]$v }
     $v = Get-YamlValue $data 'HostlistExclude';if ($v) { $Global:ZapretState.HostlistExclude = [string]$v }
+
+    # ─── Провайдер ───
+    $v = Get-YamlValue $data 'ProviderProfile'; if ($v) { $Global:ZapretState.ProviderProfile = [string]$v }
 
     # ─── Lua-методы ───
     $Global:ZapretState.LuaMethods = @()
@@ -248,6 +443,36 @@ function Import-Settings {
         }
     }
 
+    # ─── АВТО-СКАН .bin ───
+    $blobScan = Update-Winws2BlobFiles
+    if (-not $blobScan.Skipped) {
+        Write-Host ("  [auto] .bin: было в map={0}, удалено мёртвых={1}, добавлено новых={2}, итого={3}" -f `
+            ($blobScan.Total - $blobScan.Added + $blobScan.Removed),
+            $blobScan.Removed, $blobScan.Added, $blobScan.Total) -ForegroundColor DarkCyan
+    } else {
+        Write-Host "  [auto] BinPath не задан или не существует — авто-скан .bin пропущен" -ForegroundColor DarkYellow
+    }
+
+    # ─── Fooling-параметры ───
+    $Global:ZapretState.LuaFool = @{}
+    foreach ($k in $data.Keys) {
+        if ($k -match '^LuaFool_([A-Za-z0-9_]+)$') {
+            $name = $Matches[1]
+            $val  = [string]$data[$k]
+            if ($val) { $Global:ZapretState.LuaFool[$name] = $val }
+        }
+    }
+
+    # ─── Глобальные опции ───
+    $Global:ZapretState.Glob = @{}
+    foreach ($k in $data.Keys) {
+        if ($k -match '^Glob_([A-Za-z0-9_]+)$') {
+            $name = $Matches[1]
+            $val  = [string]$data[$k]
+            if ($val -ne '') { $Global:ZapretState.Glob[$name] = $val }
+        }
+    }
+
     # ─── DNS ───
     $Global:ZapretState.DnsServers    = @()
     $Global:ZapretState.DnsServerKeys = @()
@@ -278,7 +503,7 @@ function Import-Settings {
     }
     $v = Get-YamlValue $data 'DohTestDomain'; if ($v) { $Global:ZapretState.DohTestDomain = [string]$v }
 
-    # ─── Проверка Lua (с резолвом папки → файла) ───
+    # ─── Проверка Lua ───
     $libFile  = Resolve-Winws2LuaPath -Path $Global:ZapretState.LuaLibPath     -TargetName 'zapret-lib.lua'
     $antiFile = Resolve-Winws2LuaPath -Path $Global:ZapretState.LuaAntiDpiPath -TargetName 'zapret-antidpi.lua'
 
@@ -286,9 +511,11 @@ function Import-Settings {
     $antiOk = [bool]$antiFile
     $Global:ZapretState.LuaReady = ($libOk -and $antiOk)
 
-    # Если путь был папкой — подменим на реальный файл, чтобы в отчёте было видно
     if ($libFile)  { $Global:ZapretState.LuaLibPath     = $libFile }
     if ($antiFile) { $Global:ZapretState.LuaAntiDpiPath = $antiFile }
+
+    $allLua = @(Get-AllLuaScripts)
+    $luaDir = if ($libFile) { Split-Path $libFile -Parent } else { $null }
 
     # ─── Отчёт ───
     Write-Host ("  LuaMethods={0}  Blobs={1}  BlobFiles={2}" -f `
@@ -299,80 +526,124 @@ function Import-Settings {
         $(if ($libOk) {"OK"} else {"NO"}),
         $(if ($antiOk) {"OK"} else {"NO"}),
         $Global:ZapretState.LuaReady) -ForegroundColor $(if ($Global:ZapretState.LuaReady) {"Green"} else {"Red"})
+    if ($luaDir) {
+        $names = ($allLua | ForEach-Object { Split-Path $_ -Leaf }) -join ', '
+        Write-Host ("  Lua-файлы в папке ({0}): {1}" -f $allLua.Count, $names) -ForegroundColor DarkCyan
+    }
+    Write-Host ("  .bin-файлы ({0}): {1}" -f `
+        $Global:ZapretState.LuaBlobFiles.Count,
+        ($Global:ZapretState.LuaBlobFileMap.Values -join ', ')) -ForegroundColor DarkCyan
     Write-Host ("  DNS={0}  DoH={1}" -f $Global:ZapretState.DnsServers.Count, $Global:ZapretState.DohServers.Count) -ForegroundColor Gray
+    Write-Host ("  LuaFool={0}  Glob={1}" -f $Global:ZapretState.LuaFool.Count, $Global:ZapretState.Glob.Count) -ForegroundColor DarkCyan
+    Write-Host ("  ProviderProfile={0}" -f $Global:ZapretState.ProviderProfile) -ForegroundColor DarkCyan
     Write-Host "  ────────────────────────────────────────────" -ForegroundColor DarkMagenta
     Write-Host ""
 }
 
 # === SAVE-SETTINGS ===
+# ВАЖНО: НЕ перезаписывает settings.yml целиком!
+# Обновляет только значения конкретных ключей, сохраняя комментарии,
+# порядок строк и всё, что дописано руками.
 function Save-Settings {
     $file = $Global:ZapretState.ConfigFile
-    $dir  = Split-Path $file -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 
-    $hash = [ordered]@{
-        Winws2Path         = [string]$Global:ZapretState.Winws2Path
-        LuaLibPath         = [string]$Global:ZapretState.LuaLibPath
-        LuaAntiDpiPath     = [string]$Global:ZapretState.LuaAntiDpiPath
-        TxtPath            = [string]$Global:ZapretState.TxtPath
-        BinPath            = [string]$Global:ZapretState.BinPath
-        Tool               = [string]$Global:ZapretState.Tool
-        WarmupSec          = [string]$Global:ZapretState.WarmupSec
-        TimeoutSec         = [string]$Global:ZapretState.TimeoutSec
-        MaxDomains         = [string]$Global:ZapretState.MaxDomains
-        MinScore           = [string]$Global:ZapretState.MinScore
-        MinScorePercent    = [string]$Global:ZapretState.MinScorePercent
-        TopN               = [string]$Global:ZapretState.TopN
-        TargetScore        = [string]$Global:ZapretState.TargetScore
-        PreTestCount       = [string]$Global:ZapretState.PreTestCount
-        PreTestPassScore   = [string]$Global:ZapretState.PreTestPassScore
-        PreTestUrls        = [string]$Global:ZapretState.PreTestUrls
-        PreTestAllDomains  = [string]$Global:ZapretState.PreTestAllDomains
-        RandomCount        = [string]$Global:ZapretState.RandomCount
-        BaselineCheckCount = [string]$Global:ZapretState.BaselineCheckCount
-        AutoStopOnPerfect  = [string]$Global:ZapretState.AutoStopOnPerfect
-        KeepAllWorking     = [string]$Global:ZapretState.KeepAllWorking
-        ResultFile         = [string]$Global:ZapretState.ResultFile
-        ProgressFile       = [string]$Global:ZapretState.ProgressFile
-        Hostlist           = [string]$Global:ZapretState.Hostlist
-        HostlistExclude    = [string]$Global:ZapretState.HostlistExclude
+    # убедимся, что файл существует
+    if (-not (Test-Path $file)) {
+        $dir = Split-Path $file -Parent
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        [System.IO.File]::WriteAllText($file, "", [Text.UTF8Encoding]::new($true))
     }
 
-    Set-Content -Path $file -Value (ConvertTo-SimpleYaml $hash) -Encoding UTF8
+    # ─── Пути ───
+    Set-YamlValue -File $file -Key 'Winws2Path'      -Value $Global:ZapretState.Winws2Path
+    Set-YamlValue -File $file -Key 'LuaLibPath'      -Value $Global:ZapretState.LuaLibPath
+    Set-YamlValue -File $file -Key 'LuaAntiDpiPath'  -Value $Global:ZapretState.LuaAntiDpiPath
+    Set-YamlValue -File $file -Key 'TxtPath'         -Value $Global:ZapretState.TxtPath
+    Set-YamlValue -File $file -Key 'BinPath'         -Value $Global:ZapretState.BinPath
 
-    # Lua-методы и blob'ы
-    $extra = "`r`n# === LUA METHODS / BLOBS ===`r`n"
+    # ─── Основное ───
+    Set-YamlValue -File $file -Key 'Tool'              -Value $Global:ZapretState.Tool
+    Set-YamlValue -File $file -Key 'WarmupSec'         -Value ([string]$Global:ZapretState.WarmupSec)
+    Set-YamlValue -File $file -Key 'TimeoutSec'        -Value ([string]$Global:ZapretState.TimeoutSec)
+    Set-YamlValue -File $file -Key 'MaxDomains'        -Value ([string]$Global:ZapretState.MaxDomains)
+    Set-YamlValue -File $file -Key 'MinScore'          -Value ([string]$Global:ZapretState.MinScore)
+    Set-YamlValue -File $file -Key 'MinScorePercent'   -Value ([string]$Global:ZapretState.MinScorePercent)
+    Set-YamlValue -File $file -Key 'TopN'              -Value ([string]$Global:ZapretState.TopN)
+    Set-YamlValue -File $file -Key 'TargetScore'       -Value ([string]$Global:ZapretState.TargetScore)
+    Set-YamlValue -File $file -Key 'RandomCount'       -Value ([string]$Global:ZapretState.RandomCount)
+    Set-YamlValue -File $file -Key 'BaselineCheckCount'-Value ([string]$Global:ZapretState.BaselineCheckCount)
+    Set-YamlValue -File $file -Key 'AutoStopOnPerfect' -Value ([string]$Global:ZapretState.AutoStopOnPerfect)
+    Set-YamlValue -File $file -Key 'KeepAllWorking'    -Value ([string]$Global:ZapretState.KeepAllWorking)
+
+    # ─── Пре-тест ───
+    Set-YamlValue -File $file -Key 'PreTestCount'      -Value ([string]$Global:ZapretState.PreTestCount)
+    Set-YamlValue -File $file -Key 'PreTestPassScore'  -Value ([string]$Global:ZapretState.PreTestPassScore)
+    Set-YamlValue -File $file -Key 'PreTestUrls'       -Value $Global:ZapretState.PreTestUrls
+    Set-YamlValue -File $file -Key 'PreTestAllDomains' -Value ([string]$Global:ZapretState.PreTestAllDomains)
+
+    # ─── Файлы / провайдер ───
+    Set-YamlValue -File $file -Key 'ResultFile'        -Value $Global:ZapretState.ResultFile
+    Set-YamlValue -File $file -Key 'ProgressFile'      -Value $Global:ZapretState.ProgressFile
+    Set-YamlValue -File $file -Key 'Hostlist'          -Value $Global:ZapretState.Hostlist
+    Set-YamlValue -File $file -Key 'HostlistExclude'   -Value $Global:ZapretState.HostlistExclude
+    Set-YamlValue -File $file -Key 'ProviderProfile'   -Value $Global:ZapretState.ProviderProfile
+
+    # ─── Lua-методы ───
+    $methodLines = @()
     foreach ($m in $Global:ZapretState.LuaMethods) {
-        $extra += ("LuaMethod_{0}: `"{1}`"`r`n" -f ($m -replace '[^A-Za-z0-9_]','_'), $m)
+        $methodLines += ("LuaMethod_{0}: `"{1}`"" -f ($m -replace '[^A-Za-z0-9_]','_'), $m)
     }
+    Set-YamlSection -File $file -Prefix 'LuaMethod_' -NewLines $methodLines
+
+    # ─── Встроенные blob'ы ───
+    $blobLines = @()
     foreach ($b in $Global:ZapretState.LuaBlobs) {
-        $extra += ("LuaBlob_{0}: `"{1}`"`r`n" -f ($b -replace '[^A-Za-z0-9_]','_'), $b)
+        $blobLines += ("LuaBlob_{0}: `"{1}`"" -f ($b -replace '[^A-Za-z0-9_]','_'), $b)
     }
+    Set-YamlSection -File $file -Prefix 'LuaBlob_' -NewLines $blobLines
+
+    # ─── Файловые blob'ы ───
+    $bfLines = @()
     foreach ($name in $Global:ZapretState.LuaBlobFiles) {
         $fn = $Global:ZapretState.LuaBlobFileMap[$name]
-        $extra += ("LuaBlobFile_{0}: `"{1}`"`r`n" -f $name, $fn)
+        if (-not $fn) { continue }
+        $bfLines += ("LuaBlobFile_{0}: `"{1}`"" -f $name, $fn)
     }
-    Add-Content -Path $file -Value $extra -Encoding UTF8
+    Set-YamlSection -File $file -Prefix 'LuaBlobFile_' -NewLines $bfLines
 
-    # DNS
-    $dnsBlock  = "`r`n# === DNS SERVERS (UDP) ===`r`n"
-    $dnsBlock += ("DnsTestDomain: `"$($Global:ZapretState.DnsTestDomain)`"`r`n`r`n")
+    # ─── Fooling ───
+    $foolLines = @()
+    foreach ($k in $Global:ZapretState.LuaFool.Keys) {
+        $foolLines += ("LuaFool_{0}: `"{1}`"" -f $k, $Global:ZapretState.LuaFool[$k])
+    }
+    Set-YamlSection -File $file -Prefix 'LuaFool_' -NewLines $foolLines
+
+    # ─── Glob ───
+    $globLines = @()
+    foreach ($k in $Global:ZapretState.Glob.Keys) {
+        $globLines += ("Glob_{0}: `"{1}`"" -f $k, $Global:ZapretState.Glob[$k])
+    }
+    Set-YamlSection -File $file -Prefix 'Glob_' -NewLines $globLines
+
+    # ─── DNS ───
+    Set-YamlValue -File $file -Key 'DnsTestDomain' -Value $Global:ZapretState.DnsTestDomain
+    $dnsLines = @()
     for ($j = 0; $j -lt $Global:ZapretState.DnsServers.Count; $j++) {
         $key = if ($j -lt $Global:ZapretState.DnsServerKeys.Count -and $Global:ZapretState.DnsServerKeys[$j]) { $Global:ZapretState.DnsServerKeys[$j] } else { "Dns_Server$($j+1)" }
-        $dnsBlock += ("{0}: `"{1}`"`r`n" -f $key, $Global:ZapretState.DnsServers[$j])
+        $dnsLines += ("{0}: `"{1}`"" -f $key, $Global:ZapretState.DnsServers[$j])
     }
-    Add-Content -Path $file -Value $dnsBlock -Encoding UTF8
+    Set-YamlSection -File $file -Prefix 'Dns_' -NewLines $dnsLines
 
-    # DoH
-    $dohBlock  = "`r`n# === DNS-over-HTTPS (DoH) ===`r`n"
-    $dohBlock += ("DohTestDomain: `"$($Global:ZapretState.DohTestDomain)`"`r`n`r`n")
+    # ─── DoH ───
+    Set-YamlValue -File $file -Key 'DohTestDomain' -Value $Global:ZapretState.DohTestDomain
+    $dohLines = @()
     for ($j = 0; $j -lt $Global:ZapretState.DohServers.Count; $j++) {
         $key = if ($j -lt $Global:ZapretState.DohServerKeys.Count -and $Global:ZapretState.DohServerKeys[$j]) { $Global:ZapretState.DohServerKeys[$j] } else { "Doh_Server$($j+1)" }
-        $dohBlock += ("{0}: `"{1}`"`r`n" -f $key, $Global:ZapretState.DohServers[$j])
+        $dohLines += ("{0}: `"{1}`"" -f $key, $Global:ZapretState.DohServers[$j])
     }
-    Add-Content -Path $file -Value $dohBlock -Encoding UTF8
+    Set-YamlSection -File $file -Prefix 'Doh_' -NewLines $dohLines
 
-    Write-Log "settings.yml saved (winws2)"
+    Write-Log "settings.yml updated (in-place)"
 }
 
 # === WRITE-LOG ===

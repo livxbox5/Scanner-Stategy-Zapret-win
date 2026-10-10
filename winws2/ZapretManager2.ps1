@@ -16,6 +16,9 @@
 . "$PSScriptRoot\modules\Provider.ps1"
 . "$PSScriptRoot\modules\Verify.ps1"
 . "$PSScriptRoot\modules\winws2.ps1"
+. "$PSScriptRoot\modules\PortScanner.ps1"
+. "$PSScriptRoot\modules\ResultComposer.ps1"
+. "$PSScriptRoot\modules\ResultToBat.ps1"
 
 # === ЗАГРУЗКА НАСТРОЕК ===
 Import-Settings
@@ -25,6 +28,9 @@ Find-Winws2LuaScripts
 
 # === АВТО-ДЕТЕКТ ПРОВАЙДЕРА ===
 $Global:ProviderContext = Show-ProviderInfo
+if ($Global:ProviderContext) {
+    Set-CurrentProviderProfile -ProfileName $Global:ProviderContext.Profile
+}
 
 # === ПРОВЕРКА ПРАВ АДМИНИСТРАТОРА ===
 if (-not (Test-Admin)) {
@@ -54,6 +60,7 @@ function Show-Menu {
     Write-Host ("    HTTP-tool   : {0}" -f $Global:ZapretState.Tool)
     Write-Host ("    MaxDomains  : {0}" -f $(if ($Global:ZapretState.MaxDomains -eq 0) { "без лимита" } else { $Global:ZapretState.MaxDomains }))
     Write-Host ("    Lua ready   : {0}" -f $(if ($Global:ZapretState.LuaReady) { "ДА" } else { "НЕТ" })) -ForegroundColor $(if ($Global:ZapretState.LuaReady) { "Green" } else { "Red" })
+    Write-Host ("    Provider    : {0}" -f $(if ($Global:ZapretState.ProviderProfile) { $Global:ZapretState.ProviderProfile } else { "<авто>" })) -ForegroundColor $(if ($Global:ZapretState.ProviderProfile) { "Cyan" } else { "DarkGray" })
     Show-ZapretStatus
     Write-Host ""
 
@@ -66,52 +73,67 @@ function Show-Menu {
     Write-Host "   5. Путь к .bin (blob-файлы)"
     Write-Host ""
 
-    # ─── 6-10: Поиск файлов ───
+    # ─── 6-9: Поиск файлов ───
     Write-Host "  ─── Поиск файлов ──────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "   6. Найти все .txt и .bin и .Lua"
+    Write-Host "   6. Найти все .txt и .bin"
     Write-Host "   7. Найти только .txt"
     Write-Host "   8. Найти только .bin"
     Write-Host "   9. Найти .txt + показать содержимое"
-    Write-Host "  10. Найти только .lua" -ForegroundColor Cyan
     Write-Host ""
 
-    # ─── 11-15: Стратегии ───
+    # ─── 10-14: Стратегии ───
     Write-Host "  ─── Стратегии ─────────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  11. АВТО-ТЕСТ стратегий (Lua)" -ForegroundColor Yellow
-    Write-Host "  12. Показать загруженные стратегии"
-    Write-Host "  13. Выбрать и запустить стратегию"
-    Write-Host "  14. Остановить winws2"
-    Write-Host "  15. Показать resultats\resultat.txt"
+    Write-Host "  10. АВТО-ТЕСТ стратегий (Lua, с учётом провайдера)" -ForegroundColor Yellow
+    Write-Host "  11. Показать загруженные стратегии"
+    Write-Host "  12. Выбрать и запустить стратегию"
+    Write-Host "  13. Остановить winws2"
+    Write-Host "  14. Показать resultats\resultat.txt"
     Write-Host ""
 
-    # ─── 16-20: Диагностика ───
+    # ─── 15-19: Диагностика ───
     Write-Host "  ─── Диагностика ───────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  16. Проверить один сайт (без winws2)"
-    Write-Host "  17. Проверить текущее соединение"
-    Write-Host "  18. Сменить HTTP-инструмент (auto/curl/wget/iwr)"
-    Write-Host "  19. Показать домены из hostlist"
-    Write-Host "  20. Показать HTTP-инструменты"
+    Write-Host "  15. Проверить один сайт (без winws2)"
+    Write-Host "  16. Проверить текущее соединение"
+    Write-Host "  17. Сменить HTTP-инструмент (auto/curl/wget/iwr)"
+    Write-Host "  18. Показать домены из hostlist"
+    Write-Host "  19. Показать HTTP-инструменты"
     Write-Host ""
 
-    # ─── 21-23: Сеть / DNS ───
+    # ─── 20-22: Сеть / DNS ───
     Write-Host "  ─── Сеть ──────────────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  21. DNS-серверы (UDP)" -ForegroundColor Magenta
-    Write-Host "  22. DNS-over-HTTPS (DoH)" -ForegroundColor Magenta
-    Write-Host "  23. Настройки тестирования (settings.yml)" -ForegroundColor Magenta
+    Write-Host "  20. DNS-серверы (UDP)" -ForegroundColor Magenta
+    Write-Host "  21. DNS-over-HTTPS (DoH)" -ForegroundColor Magenta
+    Write-Host "  22. Настройки тестирования (settings.yml)" -ForegroundColor Magenta
     Write-Host ""
 
-    # ─── 24-27: Провайдер ───
+    # ─── 23-26: Провайдер ───
     Write-Host "  ─── Провайдер ─────────────────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  24. Показать информацию о провайдере"
-    Write-Host "  25. УМНЫЙ ПОДБОР под провайдера" -ForegroundColor Yellow
-    Write-Host "  26. Обновить данные о провайдере"
-    Write-Host "  27. Очистить базу стратегий провайдера"
+    Write-Host "  23. Показать информацию о провайдере"
+    Write-Host "  24. УМНЫЙ ПОДБОР под провайдера (фокус-режим)" -ForegroundColor Yellow
+    Write-Host "  25. Обновить данные о провайдере"
+    Write-Host "  26. Очистить базу стратегий провайдера"
     Write-Host ""
 
-    # ─── 28-29: Проверка результатов ───
+    # ─── 27-28: Проверка результатов ───
     Write-Host "  ─── Проверка результатов ──────────────────────────────────" -ForegroundColor DarkGray
-    Write-Host "  28. Статистика resultats\ (pretest + resultat)"
-    Write-Host "  29. ПЕРЕПРОВЕРИТЬ стратегии (промоут pretest -> resultat)" -ForegroundColor Yellow
+    Write-Host "  27. Статистика resultats\ (pretest + resultat)"
+    Write-Host "  28. ПЕРЕПРОВЕРИТЬ стратегии (промоут pretest -> resultat)" -ForegroundColor Yellow
+    Write-Host ""
+
+    # ─── 29: Сканер портов ───
+    Write-Host "  ─── Сканер портов ─────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  29. PORT SCANNER (Discord / WhatsApp / YouTube / ...)" -ForegroundColor Cyan
+    Write-Host ""
+
+    # ─── 30, 32: Сборка конфига ───
+    Write-Host "  ─── Сборка из resultats ───────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  30. RESULT COMPOSER (resultat.txt -> presets\composed-*.txt)" -ForegroundColor Cyan
+    Write-Host "  31. RESULT → PRESET (resultat.txt → presets\composed-*.txt с {{ROOT}})" -ForegroundColor Green
+    Write-Host ""
+
+    # ─── 31: Готовые команды ───
+    Write-Host "  ─── Команда под провайдера ────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  32. Собрать ГОТОВУЮ КОМАНДУ под текущего провайдера" -ForegroundColor Green
     Write-Host ""
 
     Write-Host "   0. Выход" -ForegroundColor DarkGray
@@ -133,7 +155,7 @@ while ($true) {
         "4"  { Set-TxtPath }
         "5"  { Set-BinPath }
 
-        # ─── 6-10: Поиск ───
+        # ─── 6-9: Поиск ───
         "6"  {
             Find-AllFiles -RootPath $Global:ZapretState.TxtPath | Out-Null
             Find-AllFiles -RootPath $Global:ZapretState.BinPath | Out-Null
@@ -141,17 +163,9 @@ while ($true) {
         "7"  { Find-AllFiles -RootPath $Global:ZapretState.TxtPath -OnlyTxt | Out-Null }
         "8"  { Find-AllFiles -RootPath $Global:ZapretState.BinPath -OnlyBin | Out-Null }
         "9"  { Find-AllFiles -RootPath $Global:ZapretState.TxtPath -OnlyTxt -ShowContent | Out-Null }
-        "10" {
-            $luaDir = Split-Path $Global:ZapretState.LuaLibPath -Parent
-            if ($luaDir -and (Test-Path $luaDir)) {
-                Find-AllFiles -RootPath $luaDir -OnlyLua | Out-Null
-            } else {
-                Write-Log "LuaLibPath не задан — не могу определить папку с .lua" "ERR"
-            }
-        }
 
-        # ─── 11-15: Стратегии ───
-        "11" {
+        # ─── 10-14: Стратегии ───
+        "10" {
             $scanResult = Invoke-StrategyScan
             if ($scanResult -and $scanResult.Count -gt 0 -and $Global:ProviderContext) {
                 $saved = 0
@@ -167,9 +181,9 @@ while ($true) {
                 }
             }
         }
-        "12" {
+        "11" {
             if ($Global:ZapretState.Strategies.Count -eq 0) {
-                Write-Log "Стратегий нет. Сначала пункт 11." "WARN"
+                Write-Log "Стратегий нет. Сначала пункт 10." "WARN"
             } else {
                 $i = 0
                 foreach ($s in $Global:ZapretState.Strategies) {
@@ -178,9 +192,9 @@ while ($true) {
                 }
             }
         }
-        "13" {
+        "12" {
             if ($Global:ZapretState.Strategies.Count -eq 0) {
-                Write-Log "Стратегий нет. Сначала пункт 11." "WARN"
+                Write-Log "Стратегий нет. Сначала пункт 10." "WARN"
             } else {
                 $i = 0
                 foreach ($s in $Global:ZapretState.Strategies) {
@@ -201,31 +215,43 @@ while ($true) {
                 }
             }
         }
-        "14" { Stop-Zapret }
-        "15" { Show-ResultFile }
+        "13" { Stop-Zapret }
+        "14" { Show-ResultFile }
 
-        # ─── 16-20: Диагностика ───
-        "16" { Test-SingleSite }
-        "17" { Test-CurrentConnection }
-        "18" { Set-HttpTool }
-        "19" { Edit-TestDomains }
-        "20" { Show-HttpToolStatus }
+        # ─── 15-19: Диагностика ───
+        "15" { Test-SingleSite }
+        "16" { Test-CurrentConnection }
+        "17" { Set-HttpTool }
+        "18" { Edit-TestDomains }
+        "19" { Show-HttpToolStatus }
 
-        # ─── 21-23: Сеть ───
-        "21" { Show-DnsMenu }
-        "22" { Show-DohMenu }
-        "23" { Show-TestSettings }
+        # ─── 20-22: Сеть ───
+        "20" { Show-DnsMenu }
+        "21" { Show-DohMenu }
+        "22" { Show-TestSettings }
 
-        # ─── 24-27: Провайдер ───
-        "24" { Show-ProviderInfo | Out-Null }
-        "25" { Invoke-SmartProviderRun }
-        "26" { Update-ProviderCache }
-        "27" { Clear-ProviderDb }
+        # ─── 23-26: Провайдер ───
+        "23" { Show-ProviderInfo | Out-Null }
+        "24" { Invoke-SmartProviderRun }
+        "25" { Update-ProviderCache }
+        "26" { Clear-ProviderDb }
 
-        # ─── 28-29: Проверка результатов ───
-        "28" { Show-ResultsStats }
-        "29" { Invoke-VerifyScan }
+        # ─── 27-28: Проверка результатов ───
+        "27" { Show-ResultsStats }
+        "28" { Invoke-VerifyScan }
 
+        # ─── 29: Сканер портов ───
+        "29" { Show-PortScannerMenu }
+
+        # ─── 30: Result composer (старый, без {{ROOT}}) ───
+        "30" { Show-ResultComposerMenu }
+
+        # ─── 31: Result → Preset (новый, с {{ROOT}}) ───
+        "31" { Show-ResultToPresetMenu }
+
+        # ─── 32: Готовые команды под провайдера ───
+        "32" { Show-ProviderReadyCommands }
+        # ─── 0: Выход // Exit ───
         "0"  { break }
         default { Write-Log "Неверный пункт" "ERR" }
     }

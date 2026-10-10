@@ -1,0 +1,125 @@
+# ===============================================================
+#  Zapret Manager 2 — methods.yml
+# ===============================================================
+#  Полный список методов --lua-desync для zapret2 / winws2.
+#  Источник: zapret-antidpi.lua + zapret-lib.lua + zapret-auto.lua.
+# ===============================================================
+
+# ═══════════════════════════════════════════════════════════════
+#  LUA-МЕТОДЫ (--lua-desync=...)
+# ═══════════════════════════════════════════════════════════════
+
+# --- Активные методы (участвуют в генерации) ---
+LuaMethod_fake:           "fake"
+LuaMethod_multisplit:     "multisplit"
+LuaMethod_multidisorder:  "multidisorder"
+LuaMethod_fakeddisorder:  "fakeddisorder"
+LuaMethod_hostfakesplit:  "hostfakesplit"
+
+# --- Базовые операции ---
+# LuaMethod_pass:              "pass"
+# LuaMethod_drop:              "drop"
+# LuaMethod_send:              "send"
+# LuaMethod_pktmod:            "pktmod"
+# LuaMethod_rst:               "rst"
+# LuaMethod_rst_flood:         "rst_flood"
+
+# --- TCP-сегментация и фрагментация ---
+# LuaMethod_multidisorder_legacy: "multidisorder_legacy"
+# LuaMethod_fakedsplit:        "fakedsplit"
+# LuaMethod_tcpseg:            "tcpseg"
+# LuaMethod_oob:               "oob"
+# LuaMethod_syndata:           "syndata"
+# LuaMethod_synack:            "synack"
+# LuaMethod_synack_split:      "synack_split"
+# LuaMethod_wsize:             "wsize"
+# LuaMethod_wssize:            "wssize"
+# LuaMethod_udplen:            "udplen"
+# LuaMethod_dht_dn:            "dht_dn"
+
+# --- HTTP-специфичные ---
+# LuaMethod_http_domcase:      "http_domcase"
+# LuaMethod_http_hostcase:     "http_hostcase"
+# LuaMethod_http_methodeol:    "http_methodeol"
+# LuaMethod_http_unixeol:      "http_unixeol"
+
+# --- Fake-инъекции ---
+# LuaMethod_tls_client_hello_clone: "tls_client_hello_clone"
+
+# --- Модификация протоколов / фрагментация ---
+# LuaMethod_ipfrag:            "ipfrag"
+# LuaMethod_ipfrag2:           "ipfrag2"
+# LuaMethod_synhide:           "synhide"
+
+# --- Специальные ---
+# LuaMethod_luaexec:           "luaexec"
+
+# --- Оркестраторы (zapret-auto.lua) ---
+# LuaMethod_circular:          "circular"
+# LuaMethod_repeater:          "repeater"
+# LuaMethod_condition:         "condition"
+# LuaMethod_stopif:            "stopif"
+# LuaMethod_per_instance_condition: "per_instance_condition"
+
+# ═══════════════════════════════════════════════════════════════
+#  BLOB-ФАЙЛЫ (LuaBlobFile_*)
+# ═══════════════════════════════════════════════════════════════
+
+LuaBlobFile_tls_google:    "tls_clienthello_www_google_com.bin"
+LuaBlobFile_tls_max:       "tls_clienthello_max_ru.bin"
+LuaBlobFile_quic_google:   "quic_initial_www_google_com.bin"
+LuaBlobFile_quic_rutube:   "quic_initial_rutube_ru.bin"
+LuaBlobFile_stun:          "stun.bin"
+
+# --- Раскомментируй нужные ---
+# LuaBlobFile_tls_4pda:    "tls_clienthello_4pda_to.bin"
+# LuaBlobFile_tls_5ka:     "tls_clienthello_5ka_ru.bin"
+# LuaBlobFile_tls_sferum:  "tls_clienthello_www_sferum_ru.bin"
+# LuaBlobFile_quic_4pda:   "quic_initial_4pda_to.bin"
+# LuaBlobFile_quic_5ka:    "quic_initial_5ka_ru.bin"
+# LuaBlobFile_quic_tencent:"quic_initial_tencent_com.bin"
+# LuaBlobFile_quic_steam:  "quic_initial_steamcommunity_com.bin"
+# LuaBlobFile_stun2:       "stun2.bin"
+# LuaBlobFile_http_iana:   "http_iana_org.bin"
+# LuaBlobFile_zero:        "zero_512.bin"
+# LuaBlobFile_discord_udp: "ACTIVE_DISCORD_UDP.bin"
+# LuaBlobFile_game_udp:    "ACTIVE_GAME_UDP.bin"
+
+# ═══════════════════════════════════════════════════════════════
+#  FOOLING-ПАРАМЕТРЫ (LuaFool_*)
+#  Добавляются в конец --lua-desync через ":"
+# ═══════════════════════════════════════════════════════════════
+
+# --- TTL ---
+# LuaFool_ip_ttl:           "ip_ttl=3"
+# LuaFool_ip_autottl:       "ip_autottl=3,1-10"
+# LuaFool_ip6_ttl:          "ip6_ttl=3"
+
+# --- TCP flags ---
+# LuaFool_tcp_md5:          "tcp_md5"
+# LuaFool_tcp_nop_del:      "tcp_nop_del"
+# LuaFool_tcp_ts_up:        "tcp_ts_up"
+
+# --- Reconstruct ---
+# LuaReconstruct_badsum:    "badsum"
+
+# --- Rawsend ---
+# LuaRawsend_repeats:       "repeats=3"
+# LuaRawsend_ifout:         "ifout=eth0"
+
+# ═══════════════════════════════════════════════════════════════
+#  ГЛОБАЛЬНЫЕ ОПЦИИ (Glob_*)
+# ═══════════════════════════════════════════════════════════════
+
+# Glob_intercept:    "0"
+# Glob_qnum:         "200"
+# Glob_reasm:        "1"
+
+# ═══════════════════════════════════════════════════════════════
+#  ВСТРОЕННЫЕ BLOB'Ы (LuaBlob_*)
+# ═══════════════════════════════════════════════════════════════
+
+# LuaBlob_fake_default_tls:  "fake_default_tls"
+# LuaBlob_fake_default_quic: "fake_default_quic"
+# LuaBlob_fake_default_http: "fake_default_http"
+# LuaBlob_fake_default_stun: "fake_default_stun"

@@ -306,8 +306,10 @@ function Get-DomainsFromHostlist {
         Write-Log "Hostlist: конкретный файл $(Split-Path $hostFiles[0] -Leaf)"
     }
     else {
-        # Папка — стандартный набор кандидатов + все list-*.txt
+        # Папка — все .txt, кроме исключающих, + сначала известные кандидаты
         $list = New-Object System.Collections.Generic.List[string]
+
+        # 1) сначала — известные кандидаты (если есть)
         $candidates = @(
             $Global:ZapretState.Hostlist,
             'list-general.txt',
@@ -321,16 +323,30 @@ function Get-DomainsFromHostlist {
             if (Test-Path $f) { $list.Add($f) }
         }
 
-        # Дополнительно — все прочие list-*.txt, которых нет в списке кандидатов
-        foreach ($f in (Get-ChildItem $TxtDir -Filter 'list-*.txt' -File -ErrorAction SilentlyContinue)) {
-            if ($list -notcontains $f.FullName) { $list.Add($f.FullName) }
+        # 2) потом — ВСЕ остальные .txt в папке, кроме:
+        #    - уже добавленных
+        #    - файлов-исключений (list-exclude*)
+        #    - служебных (README, hosts, etc.)
+        $excludeNames = @(
+            $Global:ZapretState.HostlistExclude,
+            'list-exclude.txt',
+            'list-exclude-user.txt',
+            'README.txt','readme.txt','hosts.txt'
+        ) | Where-Object { $_ } | Select-Object -Unique
+
+        foreach ($f in (Get-ChildItem $TxtDir -Filter '*.txt' -File -ErrorAction SilentlyContinue)) {
+            if ($list -contains $f.FullName) { continue }
+            if ($f.Name -in $excludeNames)  { continue }
+            if ($f.Name -match '(?i)^list-exclude') { continue }
+            $list.Add($f.FullName)
         }
 
         if ($list.Count -eq 0) {
-            Write-Log "Не найден ни один hostlist в $TxtDir" "ERR"
+            Write-Log "Не найден ни один .txt в $TxtDir" "ERR"
             return @()
         }
         $hostFiles = @($list)
+        Write-Log ("Hostlist: папка, файлов — {0}: {1}" -f $list.Count, (($list | ForEach-Object { Split-Path $_ -Leaf }) -join ', '))
     }
 
     # ─── Исключения (только в режиме папки) ───
@@ -627,7 +643,7 @@ function Invoke-StrategyScan {
         $pi++
         $pct = [math]::Round($pi / $candidates.Count * 100, 0)
         Write-Host ("  [{0,3}/{1}] {2}%  " -f $pi, $candidates.Count, $pct) -ForegroundColor DarkMagenta -NoNewline
-        Write-Host $c.Method -ForegroundColor White
+        Write-Host $c.Line -ForegroundColor White
 
         $r = Test-Strategy -StrategyLine $c.Line -Domains $preDomains -Quiet
         if ($r) {
@@ -688,7 +704,7 @@ function Invoke-StrategyScan {
         $elapsed = ((Get-Date) - $startTime).TotalSeconds
         $eta = if ($i -gt 1) { [math]::Round(($elapsed/($i-1))*($passed.Count-$i+1)/60, 1) } else { "?" }
         Write-Host ("  [{0,3}/{1}] ETA {2} мин  " -f $i, $passed.Count, $eta) -ForegroundColor DarkMagenta -NoNewline
-        Write-Host $p.Method -ForegroundColor White
+        Write-Host $p.Line -ForegroundColor White
 
         $r = Test-Strategy -StrategyLine $p.Line -Domains $Domains
         if ($r) {

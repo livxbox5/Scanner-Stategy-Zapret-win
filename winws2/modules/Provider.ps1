@@ -3,71 +3,143 @@
 # ===============================================================
 #  Авто-детект ISP через ip-api.com, встроенные presets,
 #  база найденных стратегий в config/providers.json.
+#  Фокус-режим: генерация только под текущего провайдера.
 # ===============================================================
 
 $script:ProviderPresets = @{
+
     'Rostelecom' = @{
-        Patterns   = @('Rostelecom','Ростелеком','Rt\.ru','Rostelecom PJSC')
+        Patterns   = @('Rostelecom','Ростелеком','Rt\.ru','Rostelecom PJSC',
+                       'Macroregional Branch South','Karachaevo-Cherkess')
         LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata')
+        Splits     = @('1','2','midsld','sniext+1','host','host+1','endhost')
+        Repeats    = @('repeats=2','repeats=4','repeats=6')
+        TlsMods    = @('rnd','rnd,rndsni','rnd,dupsid','sni=www.google.com')
+        BlobFiles  = @(
+            'tls_clienthello_www_google_com.bin',
+            'tls_clienthello_max_ru.bin',
+            'quic_initial_rutube_ru.bin'
+        )
+        Fool       = @()
         BlobHint   = 'tls_clienthello_www_google_com.bin, quic_initial_rutube_ru.bin'
-        Note       = 'Ростелеком: fake + multisplit/multidisorder, пробуем syndata и hostfakesplit'
+        Note       = 'Ростелеком (в т.ч. Юг): fake + multisplit, tls_mod=rnd,rndsni, repeats 2-6'
     }
+
     'MTS' = @{
         Patterns   = @('MTS','МТС','Mobile TeleSystems','MTS PJSC')
         LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit')
+        Splits     = @('1','2','midsld','sniext+1')
+        Repeats    = @('repeats=4','repeats=6','repeats=8')
+        TlsMods    = @('rnd,rndsni','rnd,dupsid,rndsni','sni=www.google.com')
+        BlobFiles  = @('tls_clienthello_www_google_com.bin','quic_initial_www_google_com.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_www_google_com.bin, quic_initial_www_google_com.bin'
         Note       = 'МТС: fake + multidisorder, tls_mod=rnd,rndsni'
     }
+
     'Beeline' = @{
         Patterns   = @('Beeline','Билайн','VimpelCom','Vimpel-Communications')
         LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder','hostfakesplit')
+        Splits     = @('1','2','midsld','host')
+        Repeats    = @('repeats=4','repeats=6')
+        TlsMods    = @('rnd,dupsid','rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_4pda_to.bin','quic_initial_4pda_to.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_4pda_to.bin, quic_initial_4pda_to.bin'
         Note       = 'Билайн: multidisorder с tls_mod=rnd,dupsid'
     }
+
     'Megafon' = @{
         Patterns   = @('Megafon','Мегафон','MegaFon','MegaFon PJSC')
         LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata')
+        Splits     = @('1','2','midsld','sniext+1')
+        Repeats    = @('repeats=2','repeats=4','repeats=6')
+        TlsMods    = @('sni=www.google.com','rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_5ka_ru.bin','quic_initial_5ka_ru.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_5ka_ru.bin, quic_initial_5ka_ru.bin'
         Note       = 'Мегафон: fake + fakeddisorder, tls_mod=sni=www.google.com'
     }
+
     'ER-Telecom' = @{
         Patterns   = @('ER-Telecom','Дом\.ру','DOM\.RU','ER-Telecom Holding')
         LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit')
+        Splits     = @('1','sniext+1','midsld')
+        Repeats    = @('repeats=2','repeats=4')
+        TlsMods    = @('rnd','rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_max_ru.bin','quic_initial_tencent_com.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_max_ru.bin, quic_initial_tencent_com.bin'
         Note       = 'Дом.ру: fake + multisplit, pos=1,sniext+1'
     }
+
     'TTK' = @{
         Patterns   = @('TTK','ТТК','TransTeleCom','TransTelecom')
         LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder')
+        Splits     = @('1','2','midsld')
+        Repeats    = @('repeats=4','repeats=6')
+        TlsMods    = @('rnd','rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_www_sferum_ru.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_www_sferum_ru.bin'
         Note       = 'ТТК: fake + multidisorder, repeats=4'
     }
+
     'MGTS' = @{
         Patterns   = @('MGTS','МГТС','Moscow City Telephone')
         LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit')
+        Splits     = @('midsld','1','2')
+        Repeats    = @('repeats=2','repeats=4')
+        TlsMods    = @('rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_www_google_com.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_www_google_com.bin'
         Note       = 'МГТС: fake + multisplit, pos=midsld'
     }
+
     'Tele2' = @{
         Patterns   = @('Tele2','Теле2','Tele2 Russia')
         LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit')
+        Splits     = @('1','2','midsld')
+        Repeats    = @('repeats=2','repeats=4')
+        TlsMods    = @('rnd','rnd,rndsni')
+        BlobFiles  = @('quic_initial_steamcommunity_com.bin')
+        Fool       = @()
         BlobHint   = 'quic_initial_steamcommunity_com.bin'
         Note       = 'Tele2: fake + multisplit, tls_mod=rnd'
     }
+
     'Yota' = @{
         Patterns   = @('Yota','Йота','Scartel')
         LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata')
+        Splits     = @('sniext+1','1','midsld')
+        Repeats    = @('repeats=2','repeats=4')
+        TlsMods    = @('rnd,rndsni')
+        BlobFiles  = @('tls_clienthello_4pda_to.bin')
+        Fool       = @()
         BlobHint   = 'tls_clienthello_4pda_to.bin'
         Note       = 'Yota: fake + fakeddisorder, pos=sniext+1'
     }
+
     'default' = @{
         Patterns   = @()
         LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata')
+        Splits     = @('1','2','midsld','sniext+1','host','host+1','endhost','endhost-1',
+                       'midsld-2','midsld+2','method+2',
+                       '1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1')
+        Repeats    = @('repeats=1','repeats=2','repeats=4','repeats=6','repeats=8')
+        TlsMods    = @('rnd','rnd,rndsni','rnd,dupsid','rnd,dupsid,rndsni',
+                       'sni=www.google.com','sni=ya.ru')
+        BlobFiles  = @()
+        Fool       = @()
         BlobHint   = 'fake_default_tls, fake_default_quic'
         Note       = 'Универсальный набор: полный перебор методов и blob-ов'
     }
 }
 
+# ─────────────────────────────────────────────────────────────
+#  Определение провайдера
+# ─────────────────────────────────────────────────────────────
 function Get-ProviderInfo {
     param([switch]$Force)
 
@@ -113,11 +185,12 @@ function Get-ProviderInfo {
 }
 
 function Find-ProviderProfile {
-    param([string]$IspName, [string]$ASN)
+    param([string]$IspName, [string]$Org, [string]$ASN)
 
-    if (-not $IspName) { return 'default' }
+    $text = "$IspName $Org $ASN"
+    if (-not $text.Trim()) { return 'default' }
 
-    $clean = $IspName -replace '(?i)(ООО|ОАО|ЗАО|ПАО|АО|LLC|Ltd|Inc|JSC|PJSC|LTD|LIMITED)\s*',''
+    $clean = $text -replace '(?i)(ООО|ОАО|ЗАО|ПАО|АО|LLC|Ltd|Inc|JSC|PJSC|LTD|LIMITED)\s*',''
     $clean = $clean -replace '[«»"''`]',''
     $clean = $clean.Trim()
 
@@ -125,7 +198,7 @@ function Find-ProviderProfile {
         if ($key -eq 'default') { continue }
         $p = $script:ProviderPresets[$key]
         foreach ($pattern in $p.Patterns) {
-            if ($clean -match $pattern -or $IspName -match $pattern) {
+            if ($clean -match $pattern -or $text -match $pattern) {
                 return $key
             }
         }
@@ -141,8 +214,43 @@ function Get-ProviderPreset {
     return $script:ProviderPresets['default']
 }
 
+# ─────────────────────────────────────────────────────────────
+#  Текущий профиль → state + settings.yml
+# ─────────────────────────────────────────────────────────────
+function Set-CurrentProviderProfile {
+    param([string]$ProfileName)
+    if (-not $ProfileName) { return }
+    if ($Global:ZapretState.ProviderProfile -ne $ProfileName) {
+        $Global:ZapretState.ProviderProfile = $ProfileName
+        Save-Settings
+    }
+}
+
+# ─────────────────────────────────────────────────────────────
+#  Фокус-параметры провайдера
+# ─────────────────────────────────────────────────────────────
+function Get-ProviderFocusParams {
+    $profile = $Global:ZapretState.ProviderProfile
+    if (-not $profile) { return $null }
+    if ($profile -eq 'default') { return $null }  # default = полный перебор
+    $preset = Get-ProviderPreset -ProfileName $profile
+    if (-not $preset) { return $null }
+
+    return [pscustomobject]@{
+        Profile    = $profile
+        Splits     = @($preset.Splits     | Where-Object { $_ })
+        Repeats    = @($preset.Repeats    | Where-Object { $_ })
+        TlsMods    = @($preset.TlsMods    | Where-Object { $_ })
+        BlobFiles  = @($preset.BlobFiles  | Where-Object { $_ })
+        LuaMethods = @($preset.LuaMethods | Where-Object { $_ })
+        Fool       = @($preset.Fool       | Where-Object { $_ })
+    }
+}
+
 function Apply-ProviderPreset {
     param([string]$ProfileName)
+
+    Set-CurrentProviderProfile -ProfileName $ProfileName
 
     $preset = Get-ProviderPreset -ProfileName $ProfileName
 
@@ -152,6 +260,10 @@ function Apply-ProviderPreset {
 
     Write-Host ("  Применён preset '{0}' (winws2/Lua)" -f $ProfileName) -ForegroundColor Gray
     Write-Host ("    LuaMethods : {0}" -f ($preset.LuaMethods -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("    Splits     : {0}" -f ($preset.Splits    -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("    Repeats    : {0}" -f ($preset.Repeats   -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("    TlsMods    : {0}" -f ($preset.TlsMods   -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("    BlobFiles  : {0}" -f ($preset.BlobFiles -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    Blob hint  : {0}" -f $preset.BlobHint) -ForegroundColor DarkGray
     Write-Host ("    Note       : {0}" -f $preset.Note) -ForegroundColor DarkYellow
 
@@ -164,6 +276,9 @@ function Apply-ProviderPreset {
     }
 }
 
+# ─────────────────────────────────────────────────────────────
+#  База стратегий провайдера
+# ─────────────────────────────────────────────────────────────
 function Get-ProviderDbPath {
     $cfg = Split-Path $Global:ZapretState.ConfigFile -Parent
     return (Join-Path $cfg 'providers.json')
@@ -230,8 +345,6 @@ function Save-ProviderStrategy {
     }
 
     $entry = $db.Providers.$ProfileName
-
-    # КРИТИЧНО: гарантируем, что Strategies — массив
     $strategies = @($entry.Strategies)
 
     $exists = $false
@@ -274,6 +387,9 @@ function Get-KnownStrategies {
     return @($entry.Strategies | Sort-Object -Property @{Expression={$_.Score};Descending=$true})
 }
 
+# ─────────────────────────────────────────────────────────────
+#  Инфо о провайдере
+# ─────────────────────────────────────────────────────────────
 function Show-ProviderInfo {
     Write-Host ""
     Write-Host "  ─── ПРОВАЙДЕР ──────────────────────────────" -ForegroundColor DarkMagenta
@@ -285,7 +401,7 @@ function Show-ProviderInfo {
         return $null
     }
 
-    $profile = Find-ProviderProfile -IspName $info.ISP -ASN $info.ASN
+    $profile = Find-ProviderProfile -IspName $info.ISP -Org $info.Org -ASN $info.ASN
 
     Write-Host ("  IP:        {0}" -f $info.IP) -ForegroundColor Gray
     Write-Host ("  Провайдер: {0}" -f $info.ISP) -ForegroundColor Gray
@@ -311,9 +427,148 @@ function Show-ProviderInfo {
     }
 }
 
+# ─────────────────────────────────────────────────────────────
+#  Готовая длинная команда для текущего провайдера
+# ─────────────────────────────────────────────────────────────
+function Build-ProviderCommand {
+    param(
+        [ValidateSet('fake+multisplit','fake+multidisorder','fake+fakeddisorder','hostfakesplit','fake+syndata')]
+        [string]$Kind = 'fake+multisplit',
+
+        [string]$SplitPos = '1',
+        [string]$Repeats  = 'repeats=4',
+        [string]$TlsMod   = 'rnd,rndsni',
+        [string]$BlobFile = ''
+    )
+
+    $ready = Test-Winws2Ready
+    if (-not $ready.Ready) {
+        Write-Log "winws2 не готов:" "ERR"
+        $ready.Issues | ForEach-Object { Write-Log "  - $_" "ERR" }
+        return $null
+    }
+
+    $luaInit = Get-Winws2LuaInit
+
+    if (-not $BlobFile) {
+        $focus = Get-ProviderFocusParams
+        if ($focus -and $focus.BlobFiles.Count -gt 0) { $BlobFile = $focus.BlobFiles[0] }
+    }
+    $blobKey = $null
+    if ($BlobFile) {
+        foreach ($k in $Global:ZapretState.LuaBlobFileMap.Keys) {
+            if ($Global:ZapretState.LuaBlobFileMap[$k] -ieq $BlobFile) { $blobKey = $k; break }
+        }
+    }
+    if (-not $blobKey) { $blobKey = 'tls_google' }
+
+    $blobDef = Get-Winws2BlobDefs
+
+    $hl = ""
+    if ($Global:ZapretState.TxtPath -and (Test-Path $Global:ZapretState.TxtPath)) {
+        $name = $Global:ZapretState.Hostlist
+        if (-not $name) { $name = 'list-general.txt' }
+        $f = Join-Path $Global:ZapretState.TxtPath $name
+        if (Test-Path $f) { $hl = " --hostlist=`"$($f -replace '\\','/')`"" }
+    }
+
+    $foolSuf = Get-Winws2FoolSuffix
+    $globExt = Get-Winws2GlobalExtras
+
+    $wf = "--wf-tcp-out=443 --wf-tcp-in=443 --wf-udp-out=443 --wf-udp-in=443"
+    $head = "$wf $luaInit $blobDef $globExt".Trim()
+
+    $action = switch ($Kind) {
+        'fake+multisplit' {
+            "--filter-tcp=443 --filter-l7=tls$hl --payload=known " +
+            "--lua-desync=fake:blob=$blobKey`:tls_mod=$TlsMod`:$Repeats$foolSuf " +
+            "--lua-desync=multisplit`:pos=$SplitPos$foolSuf"
+        }
+        'fake+multidisorder' {
+            "--filter-tcp=443 --filter-l7=tls$hl --payload=known " +
+            "--lua-desync=fake:blob=$blobKey`:$Repeats$foolSuf " +
+            "--lua-desync=multidisorder`:pos=$SplitPos$foolSuf"
+        }
+        'fake+fakeddisorder' {
+            "--filter-tcp=443 --filter-l7=tls$hl --payload=known " +
+            "--lua-desync=fake:blob=$blobKey`:repeats=2$foolSuf " +
+            "--lua-desync=fakeddisorder`:pos=$SplitPos$foolSuf"
+        }
+        'hostfakesplit' {
+            "--filter-tcp=443 --filter-l7=tls$hl --payload=known " +
+            "--lua-desync=hostfakesplit`:host=www.google.com`:altorder=1$foolSuf"
+        }
+        'fake+syndata' {
+            "--filter-tcp=443 --filter-l7=tls$hl --payload=known " +
+            "--lua-desync=fake:blob=$blobKey`:repeats=2$foolSuf " +
+            "--lua-desync=syndata$foolSuf"
+        }
+    }
+
+    return "$head $action"
+}
+
+function Show-ProviderReadyCommands {
+    $ctx = Show-ProviderInfo
+    if (-not $ctx) { return }
+
+    Set-CurrentProviderProfile -ProfileName $ctx.Profile
+
+    $focus = Get-ProviderFocusParams
+    if (-not $focus) {
+        Write-Log "Нет фокус-параметров для профиля '$($ctx.Profile)' (default = полный перебор)" "WARN"
+        Write-Host ""
+        Write-Host "  Для default-профиля используй пункт 10 (АВТО-ТЕСТ)." -ForegroundColor Yellow
+        Write-Host ""
+        Read-Host "  Enter..."
+        return
+    }
+
+    Write-Host ""
+    Write-Host ("  Провайдер: {0}" -f $ctx.Profile) -ForegroundColor Magenta
+    Write-Host ("  Splits   : {0}" -f ($focus.Splits     -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("  Repeats  : {0}" -f ($focus.Repeats    -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("  TlsMods  : {0}" -f ($focus.TlsMods    -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("  Blobs    : {0}" -f ($focus.BlobFiles  -join ', ')) -ForegroundColor DarkGray
+    Write-Host ""
+
+    $topRepeats = if ($focus.Repeats.Count) { $focus.Repeats[0] } else { 'repeats=4' }
+    $topTlsMod  = if ($focus.TlsMods.Count) { $focus.TlsMods[0] } else { 'rnd,rndsni' }
+    $topSplit   = if ($focus.Splits.Count)  { $focus.Splits[0] }  else { '1' }
+
+    $presets = @(
+        @{ Kind = 'fake+multisplit';    P = $topSplit; R = $topRepeats;  M = $topTlsMod },
+        @{ Kind = 'fake+multidisorder'; P = $topSplit; R = $topRepeats;  M = $topTlsMod },
+        @{ Kind = 'hostfakesplit';      P = '';        R = '';           M = ''         },
+        @{ Kind = 'fake+fakeddisorder'; P = 'midsld';  R = 'repeats=2';  M = ''         },
+        @{ Kind = 'fake+syndata';       P = '';        R = '';           M = $topTlsMod }
+    )
+
+    $i = 0
+    foreach ($p in $presets) {
+        $i++
+        $cmd = Build-ProviderCommand -Kind $p.Kind -SplitPos $p.P -Repeats $p.R -TlsMod $p.M
+        Write-Host ("  [{0}] {1}" -f $i, $p.Kind) -ForegroundColor Yellow
+        Write-Host ("      {0}" -f $cmd) -ForegroundColor White
+        Write-Host ""
+    }
+
+    Write-Host "  Подсказка:" -ForegroundColor DarkCyan
+    Write-Host "    • Запуск одной — пункт 12 (вставить вручную)" -ForegroundColor DarkGray
+    Write-Host "    • Полный авто-подбор (только эти параметры) — пункт 10" -ForegroundColor DarkGray
+    Write-Host "    • Дополнительные — пункт 24 (сохранит лучшие в providers.json)" -ForegroundColor DarkGray
+    Write-Host ""
+    Read-Host "  Enter..."
+}
+
+# ─────────────────────────────────────────────────────────────
+#  Умный запуск под провайдера (пункт 24)
+# ─────────────────────────────────────────────────────────────
 function Invoke-SmartProviderRun {
     $ctx = Show-ProviderInfo
     if (-not $ctx) { return }
+
+    Set-CurrentProviderProfile -ProfileName $ctx.Profile
 
     if ($ctx.Known.Count -gt 0) {
         Write-Host ""
@@ -357,7 +612,7 @@ function Invoke-SmartProviderRun {
     Apply-ProviderPreset -ProfileName $ctx.Profile
 
     Write-Host ""
-    Write-Host "  Запускаю авто-тест..." -ForegroundColor Magenta
+    Write-Host "  Запускаю авто-тест (ФОКУС на параметрах провайдера)..." -ForegroundColor Magenta
 
     $result = Invoke-StrategyScan
 
@@ -400,5 +655,7 @@ function Update-ProviderCache {
         Write-Log "Не удалось обновить: $($info.Err)" "ERR"
     } else {
         Write-Log "Провайдер: $($info.ISP)  ($($info.City), $($info.ASN))"
+        $profile = Find-ProviderProfile -IspName $info.ISP -Org $info.Org -ASN $info.ASN
+        Set-CurrentProviderProfile -ProfileName $profile
     }
 }
