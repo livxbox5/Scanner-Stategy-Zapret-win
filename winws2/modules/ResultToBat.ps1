@@ -1,18 +1,9 @@
 ﻿# ===============================================================
 # === RESULT → PRESET (ResultToBat.ps1) — winws2 ===
 # ===============================================================
-#  Собирает .txt-пресет (как Generall_1.txt) из resultats\*.txt.
-#  Использует {{ROOT}}-плейсхолдеры. Готовый файл совместим с
-#  service.bat и test zapret.ps1.
-#
-#  Поиск:
-#    # === GET-STRATEGIESFROMFILE ===      парсит resultat/pretest/verify
-#    # === GET-STRATEGYACTIONPART ===      вырезает filter/payload/lua-desync
-#    # === CONVERT-PATHSTOROOTPLACEHOLDER === абс.пути -> {{ROOT}}/
-#    # === SPLIT-WINWS2ARGS ===            режет строку на аргументы
-#    # === NEW-COMPOSEDPRESET ===          сформировать .txt
-#    # === INVOKE-RESULTTOPRESET ===       обёртка
-#    # === SHOW-RESULTTOPRESETMENU ===     меню
+#  Собирает .txt-пресет в формате Generall_ALT1.txt из resultats\*.txt.
+#  Использует ОТНОСИТЕЛЬНЫЕ пути (lua/, bin/fake/, lists/, windivert.filter/).
+#  CWD пресета задаётся start.bat через `cd /d "%ROOT%"`.
 # ===============================================================
 
 # ============================================================================
@@ -30,7 +21,6 @@ function Get-StrategiesFromFile {
     for ($i = 0; $i -lt $lines.Count; $i++) {
         $l = $lines[$i].Trim()
 
-        # ── resultat.txt / verify.txt: "# #N  [x/y]  method" ──
         if ($l -match '^#\s*#(\d+)\s*\[(\d+)/(\d+)\]\s*(.+)$') {
             $rank   = [int]$Matches[1]
             $score  = [int]$Matches[2]
@@ -58,7 +48,6 @@ function Get-StrategiesFromFile {
             continue
         }
 
-        # ── pretest.txt: "# СТРАТЕГИЯ N → Score: x/y" ──
         if ($l -match '^#\s*.*?Score:\s*(\d+)/(\d+)\s*$') {
             $curScore = [int]$Matches[1]
             $curTotal = [int]$Matches[2]
@@ -85,7 +74,7 @@ function Get-StrategiesFromFile {
 }
 
 # ============================================================================
-#  Вырезать из строки стратегии только filter/payload/lua-desync
+#  Вырезать из строки только filter/payload/lua-desync
 # ============================================================================
 function Get-StrategyActionPart {
     param([string]$Line)
@@ -100,47 +89,24 @@ function Get-StrategyActionPart {
 }
 
 # ============================================================================
-#  Замена абсолютных путей на {{ROOT}}/
+#  Абсолютные пути -> относительные (для формата Generall_ALT1)
 # ============================================================================
-function Convert-PathsToRootPlaceholder {
-    param(
-        [string]$Line,
-        [string]$ProjectRoot
-    )
+function Convert-PathsToRelative {
+    param([string]$Line)
     if (-not $Line) { return $Line }
-    if (-not $ProjectRoot) { return $Line }
 
-    $fwd = ($ProjectRoot -replace '\\','/').TrimEnd('/')
-    $bck = ($ProjectRoot -replace '/','\').TrimEnd('\')
-
-    $pairs = @(
-        @("$fwd/windivert.filter/", '{{ROOT}}/windivert.filter/'),
-        @("$bck\windivert.filter\", '{{ROOT}}/windivert.filter/'),
-        @("$fwd/bin/fake/",         '{{ROOT}}/bin/fake/'),
-        @("$bck\bin\fake\",         '{{ROOT}}/bin/fake/'),
-        @("$fwd/bin/",              '{{ROOT}}/bin/'),
-        @("$bck\bin\",              '{{ROOT}}/bin/'),
-        @("$fwd/lua/",              '{{ROOT}}/lua/'),
-        @("$bck\lua\",              '{{ROOT}}/lua/'),
-        @("$fwd/lists/",            '{{ROOT}}/lists/'),
-        @("$bck\lists\",            '{{ROOT}}/lists/'),
-        @("$fwd/runtime/",          '{{ROOT}}/runtime/'),
-        @("$bck\runtime\",          '{{ROOT}}/runtime/'),
-        @("$fwd/",                  '{{ROOT}}/'),
-        @("$bck\",                  '{{ROOT}}/')
-    )
-
-    $result = $Line
-    foreach ($pair in $pairs) {
-        $result = $result.Replace($pair[0], $pair[1])
-    }
-    $result = $result.Replace('{{ROOT}}\', '{{ROOT}}/')
-    return $result
+    $r = $Line
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]windivert\.filter[\\/]', 'windivert.filter/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]bin[\\/]fake[\\/]',       'bin/fake/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]bin[\\/]',                'bin/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]lua[\\/]',                'lua/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]lists[\\/]',              'lists/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]runtime[\\/]',            'runtime/')
+    return $r
 }
 
 # ============================================================================
-#  Разбить строку стратегии на отдельные аргументы
-#  (по пробелам, с учётом кавычек)
+#  Разбить строку стратегии на аргументы (с учётом кавычек)
 # ============================================================================
 function Split-Winws2Args {
     param([string]$Line)
@@ -169,7 +135,7 @@ function Split-Winws2Args {
 }
 
 # ============================================================================
-#  Генерация .txt-пресета в формате Generall_1.txt
+#  Генерация .txt-пресета в формате Generall_ALT1.txt
 # ============================================================================
 function New-ComposedPreset {
     param(
@@ -183,53 +149,42 @@ function New-ComposedPreset {
         throw "Нет стратегий для сборки"
     }
 
-    $root = $null
-    if ($Global:ZapretState.ConfigFile) {
-        $cfgDir = Split-Path $Global:ZapretState.ConfigFile -Parent
-        $root   = Split-Path $cfgDir -Parent
-    }
-    if (-not $root) { $root = $PSScriptRoot }
-    $root = $root.TrimEnd('\','/')
-
     $sb = New-Object System.Text.StringBuilder
 
     # ── Заголовок ──
-    [void]$sb.AppendLine('# ==============================================================')
-    [void]$sb.AppendLine('# ZAPRET 2 — ' + $Title)
+    [void]$sb.AppendLine('#=====================================================')
+    [void]$sb.AppendLine('# блок 1 — ' + $Title)
     [void]$sb.AppendLine('# Автосгенерировано: ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
     [void]$sb.AppendLine('# Источник: ' + $SourceInfo)
     [void]$sb.AppendLine('# Стратегий: ' + $Strategies.Count)
-    [void]$sb.AppendLine('# ==============================================================')
+    [void]$sb.AppendLine('#=====================================================')
     [void]$sb.AppendLine('')
 
-    # ── Глобальная шапка (как в Generall_1.txt) ──
-    [void]$sb.AppendLine('--chdir="{{ROOT}}/bin"')
+    # ── Глобальная шапка (относительные пути) ──
     [void]$sb.AppendLine('--debug=0')
     [void]$sb.AppendLine('--ctrack-disable=0')
     [void]$sb.AppendLine('--ipcache-lifetime=8400')
     [void]$sb.AppendLine('--ipcache-hostname=1')
-    [void]$sb.AppendLine('#======================================================================================================')
-    [void]$sb.AppendLine('--lua-init=@"{{ROOT}}/lua/zapret-lib.lua"')
-    [void]$sb.AppendLine('--lua-init=@"{{ROOT}}/lua/zapret-antidpi.lua"')
-    [void]$sb.AppendLine('--lua-init=@"{{ROOT}}/lua/zapret-auto.lua"')
-    [void]$sb.AppendLine('#=======================================================================================================')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-lib.lua"')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-antidpi.lua"')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-auto.lua"')
+    [void]$sb.AppendLine('')
     [void]$sb.AppendLine('--wf-tcp-out=80,443,2053,2083,2087,2096,8443,12')
     [void]$sb.AppendLine('--wf-udp-out=443,19294-19344,50000-50100,12')
-    [void]$sb.AppendLine('#========================================================================================================')
-    [void]$sb.AppendLine('--wf-raw-part=@"{{ROOT}}/windivert.filter/windivert_part.discord_media.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"{{ROOT}}/windivert.filter/windivert_part.stun.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"{{ROOT}}/windivert.filter/windivert_part.wireguard.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"{{ROOT}}/windivert.filter/windivert_part.quic_initial_ietf.txt"')
-    [void]$sb.AppendLine('#========================================================================================================')
-    [void]$sb.AppendLine('--blob=tls_google:@"{{ROOT}}/bin/fake/tls_clienthello_www_google_com.bin"')
-    [void]$sb.AppendLine('--blob=tls_max:@"{{ROOT}}/bin/fake/tls_clienthello_max_ru.bin"')
-    [void]$sb.AppendLine('--blob=quic_google:@"{{ROOT}}/bin/fake/quic_initial_www_google_com.bin"')
-    [void]$sb.AppendLine('--blob=stun:@"{{ROOT}}/bin/fake/stun.bin"')
-    [void]$sb.AppendLine('--blob=discord_voice:@"{{ROOT}}/bin/fake/quic_initial_dbankcloud_ru.bin"')
-    [void]$sb.AppendLine('--blob=game_udp:@"{{ROOT}}/bin/fake/quic_initial_dbankcloud_ru.bin"')
-    [void]$sb.AppendLine('--blob=http_iana:@"{{ROOT}}/bin/fake/http_iana_org.bin"')
-    [void]$sb.AppendLine('--blob=zero:@"{{ROOT}}/bin/fake/zero_512.bin"')
-    [void]$sb.AppendLine('#======================================================================================================')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.discord_media.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.stun.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.wireguard.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.quic_initial_ietf.txt"')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('--blob=tls_google:@"bin/fake/tls_clienthello_www_google_com.bin"')
+    [void]$sb.AppendLine('--blob=tls_max:@"bin/fake/tls_clienthello_max_ru.bin"')
+    [void]$sb.AppendLine('--blob=quic_google:@"bin/fake/quic_initial_www_google_com.bin"')
+    [void]$sb.AppendLine('--blob=stun:@"bin/fake/stun.bin"')
+    [void]$sb.AppendLine('--blob=discord_voice:@"bin/fake/quic_initial_dbankcloud_ru.bin"')
+    [void]$sb.AppendLine('--blob=game_udp:@"bin/fake/quic_initial_dbankcloud_ru.bin"')
+    [void]$sb.AppendLine('--blob=http_iana:@"bin/fake/http_iana_org.bin"')
+    [void]$sb.AppendLine('--blob=zero:@"bin/fake/zero_512.bin"')
     [void]$sb.AppendLine('')
 
     # ── Стратегии ──
@@ -237,8 +192,8 @@ function New-ComposedPreset {
     foreach ($s in $Strategies) {
         $idx++
         $actionRaw = Get-StrategyActionPart -Line $s.Line
-        $actionTxt = Convert-PathsToRootPlaceholder -Line $actionRaw -ProjectRoot $root
-        $tokens    = Split-Winws2Args -Line $actionTxt
+        $actionRel = Convert-PathsToRelative -Line $actionRaw
+        $tokens    = Split-Winws2Args -Line $actionRel
 
         [void]$sb.AppendLine('#========================================================')
         [void]$sb.AppendLine(('#  STRATEGY {0}  —  #{1}  [{2}/{3}]  {4}%' -f $idx, $s.Rank, $s.Score, $s.Total, $s.Percent))
@@ -318,7 +273,7 @@ function Show-ResultToPresetMenu {
     while ($true) {
         Clear-Host
         Write-Host "==============================================================" -ForegroundColor Cyan
-        Write-Host "       RESULT → PRESET — сборка .txt ({{ROOT}})              " -ForegroundColor Cyan
+        Write-Host "       RESULT → PRESET (формат Generall_ALT1, относит. пути)  " -ForegroundColor Cyan
         Write-Host "==============================================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host ("  Папка resultats/: {0}" -f $resultDir) -ForegroundColor DarkCyan
@@ -427,8 +382,8 @@ function Show-ResultToPresetMenu {
             Write-Host ("  Файл: {0}" -f $result.OutputFile) -ForegroundColor Green
             Write-Host ""
             Write-Host "  Дальше:" -ForegroundColor DarkCyan
+            Write-Host ("    • start.bat → выбрать '{0}' (файл в presets\)" -f [IO.Path]::GetFileNameWithoutExtension($result.OutputFile)) -ForegroundColor White
             Write-Host ("    • service.bat → пункт 1, выбрать '{0}'" -f [IO.Path]::GetFileNameWithoutExtension($result.OutputFile)) -ForegroundColor White
-            Write-Host  "    • test zapret.ps1 → подхватит из presets\ автоматически" -ForegroundColor White
             Write-Host ""
             Read-Host "Enter..."
         } catch {

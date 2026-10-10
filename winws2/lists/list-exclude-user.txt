@@ -1,0 +1,7 @@
+domain.example.abc
+firstmail.ltd
+ru.duolingo.com
+duolingo.com
+aliexpress.com
+aliexpress.ru
+mi.com

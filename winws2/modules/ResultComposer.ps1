@@ -172,99 +172,112 @@ function New-ComposedConfig {
         throw "Нет стратегий для составления"
     }
 
-    $pathMap = Get-ComposerRootPaths
     $sb = New-Object System.Text.StringBuilder
 
-    # ── Шапка ──
-    [void]$sb.AppendLine("# ==============================================================")
-    [void]$sb.AppendLine("# ZAPRET 2 NEXT — $Title")
-    [void]$sb.AppendLine("# Автосгенерировано: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-    [void]$sb.AppendLine("# Источник: $SourceInfo")
-    [void]$sb.AppendLine("# Стратегий: $($Strategies.Count)")
-    [void]$sb.AppendLine("# ==============================================================")
-    [void]$sb.AppendLine("")
-    [void]$sb.AppendLine("# Шапка — переменные (обрабатываются preprocess-config.ps1)")
-    [void]$sb.AppendLine('set "BIN=%ROOT%/bin"')
-    [void]$sb.AppendLine('set "FAKE=%BIN%/fake"')
-    [void]$sb.AppendLine('set "LUA=%ROOT%/lua"')
-    [void]$sb.AppendLine('set "WDF=%ROOT%/windivert.filter"')
-    [void]$sb.AppendLine('set "LIST=%ROOT%/lists"')
-    [void]$sb.AppendLine("")
-    [void]$sb.AppendLine('--chdir="%BIN%"')
-    [void]$sb.AppendLine("--debug=0")
-    [void]$sb.AppendLine("--ctrack-disable=0")
-    [void]$sb.AppendLine("--ipcache-lifetime=8400")
-    [void]$sb.AppendLine("--ipcache-hostname=1")
-    [void]$sb.AppendLine("")
-    [void]$sb.AppendLine('--lua-init=@"%LUA%/zapret-lib.lua"')
-    [void]$sb.AppendLine('--lua-init=@"%LUA%/zapret-antidpi.lua"')
-    [void]$sb.AppendLine('--lua-init=@"%LUA%/zapret-auto.lua"')
-    [void]$sb.AppendLine("")
+    # ── Заголовок ──
+    [void]$sb.AppendLine('#=====================================================')
+    [void]$sb.AppendLine('# блок 1 — ' + $Title)
+    [void]$sb.AppendLine('# Автосгенерировано: ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
+    [void]$sb.AppendLine('# Источник: ' + $SourceInfo)
+    [void]$sb.AppendLine('# Стратегий: ' + $Strategies.Count)
+    [void]$sb.AppendLine('#=====================================================')
+    [void]$sb.AppendLine('')
 
-    # ── Уникальные blob'ы из стратегий ──
-    $allBlobs = [ordered]@{}
-    foreach ($s in $Strategies) {
-        $b = Get-StrategyBlobs -Line $s.Line
-        foreach ($name in $b.Keys) {
-            if (-not $allBlobs.Contains($name)) {
-                $allBlobs[$name] = $b[$name]
-            }
-        }
-    }
-
-    # ── Стандартные fallback-blob'ы, если их нет ──
-    $fallback = [ordered]@{
-        'tls_google'    = '%FAKE%/tls_clienthello_www_google_com.bin'
-        'tls_max'       = '%FAKE%/tls_clienthello_max_ru.bin'
-        'quic_google'   = '%FAKE%/quic_initial_www_google_com.bin'
-        'stun'          = '%FAKE%/stun.bin'
-        'discord_voice' = '%FAKE%/quic_initial_dbankcloud_ru.bin'
-        'game_udp'      = '%FAKE%/quic_initial_dbankcloud_ru.bin'
-        'http_iana'     = '%FAKE%/http_iana_org.bin'
-        'zero'          = '%FAKE%/zero_512.bin'
-    }
-
-    $emitted = New-Object System.Collections.Generic.HashSet[string]
-
-    # Сначала — реально используемые
-    foreach ($name in $allBlobs.Keys) {
-        $path = Convert-PathsToPlaceholders -Line $allBlobs[$name] -PathMap $pathMap
-        [void]$sb.AppendLine("--blob=$name`:@`"$path`"")
-        [void]$emitted.Add($name)
-    }
-    # Потом — fallback (если ещё не добавлены)
-    foreach ($name in $fallback.Keys) {
-        if ($emitted.Contains($name)) { continue }
-        [void]$sb.AppendLine("--blob=$name`:@`"$($fallback[$name])`"")
-    }
-    [void]$sb.AppendLine("")
+    # ── Глобальная шапка ──
+    [void]$sb.AppendLine('--debug=0')
+    [void]$sb.AppendLine('--ctrack-disable=0')
+    [void]$sb.AppendLine('--ipcache-lifetime=8400')
+    [void]$sb.AppendLine('--ipcache-hostname=1')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-lib.lua"')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-antidpi.lua"')
+    [void]$sb.AppendLine('--lua-init=@"lua/zapret-auto.lua"')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('--wf-tcp-out=80,443,2053,2083,2087,2096,8443,12')
+    [void]$sb.AppendLine('--wf-udp-out=443,19294-19344,50000-50100,12')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.discord_media.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.stun.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.wireguard.txt"')
+    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.quic_initial_ietf.txt"')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('--blob=tls_google:@"bin/fake/tls_clienthello_www_google_com.bin"')
+    [void]$sb.AppendLine('--blob=tls_max:@"bin/fake/tls_clienthello_max_ru.bin"')
+    [void]$sb.AppendLine('--blob=quic_google:@"bin/fake/quic_initial_www_google_com.bin"')
+    [void]$sb.AppendLine('--blob=stun:@"bin/fake/stun.bin"')
+    [void]$sb.AppendLine('--blob=discord_voice:@"bin/fake/quic_initial_dbankcloud_ru.bin"')
+    [void]$sb.AppendLine('--blob=game_udp:@"bin/fake/quic_initial_dbankcloud_ru.bin"')
+    [void]$sb.AppendLine('--blob=http_iana:@"bin/fake/http_iana_org.bin"')
+    [void]$sb.AppendLine('--blob=zero:@"bin/fake/zero_512.bin"')
+    [void]$sb.AppendLine('')
 
     # ── Стратегии ──
     $idx = 0
     foreach ($s in $Strategies) {
         $idx++
-        $actionLine = Get-StrategyActionPart -Line $s.Line
-        $actionLine = Convert-PathsToPlaceholders -Line $actionLine -PathMap $pathMap
+        $actionRaw = Get-StrategyActionPart -Line $s.Line
+        $actionRel = Convert-PathsToRelative -Line $actionRaw
+        $tokens    = Split-Winws2Args -Line $actionRel
 
-        [void]$sb.AppendLine("#========================================================")
-        [void]$sb.AppendLine("#  STRATEGY $idx  —  #$($s.Rank)  [$($s.Score)/$($s.Total)]  $($s.Percent)%")
-        [void]$sb.AppendLine("#  $($s.Method)")
-        [void]$sb.AppendLine("#========================================================")
-        [void]$sb.AppendLine($actionLine)
-        [void]$sb.AppendLine("--new")
-        [void]$sb.AppendLine("")
+        [void]$sb.AppendLine('#========================================================')
+        [void]$sb.AppendLine(('#  STRATEGY {0}  —  #{1}  [{2}/{3}]  {4}%' -f $idx, $s.Rank, $s.Score, $s.Total, $s.Percent))
+        [void]$sb.AppendLine('#  ' + $s.Method)
+        [void]$sb.AppendLine('#========================================================')
+
+        foreach ($t in $tokens) {
+            [void]$sb.AppendLine($t)
+        }
+        [void]$sb.AppendLine('--new')
+        [void]$sb.AppendLine('')
     }
 
     $outPath = [IO.Path]::GetFullPath($OutputFile)
     $outDir  = Split-Path $outPath -Parent
-    if (-not (Test-Path -LiteralPath $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
+    if (-not (Test-Path -LiteralPath $outDir)) {
+        New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+    }
     [IO.File]::WriteAllText($outPath, $sb.ToString(), [Text.UTF8Encoding]::new($false))
 
     return [pscustomobject]@{
         OutputFile    = $outPath
         StrategyCount = $Strategies.Count
-        BlobCount     = $emitted.Count
+        BlobCount     = 0
     }
+}
+
+function Convert-PathsToRelative {
+    param([string]$Line)
+    if (-not $Line) { return $Line }
+    $r = $Line
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]windivert\.filter[\\/]', 'windivert.filter/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]bin[\\/]fake[\\/]',       'bin/fake/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]bin[\\/]',                'bin/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]lua[\\/]',                'lua/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]lists[\\/]',              'lists/')
+    $r = [regex]::Replace($r, '(?i)[A-Z]:[\\/][^"]*?[\\/]runtime[\\/]',            'runtime/')
+    return $r
+}
+
+function Split-Winws2Args {
+    param([string]$Line)
+    if (-not $Line) { return @() }
+    $tokens  = New-Object System.Collections.Generic.List[string]
+    $current = New-Object System.Text.StringBuilder
+    $inQuotes = $false
+    foreach ($ch in $Line.ToCharArray()) {
+        if ($ch -eq '"') {
+            $inQuotes = -not $inQuotes
+            [void]$current.Append($ch)
+        } elseif (($ch -eq ' ' -or $ch -eq "`t") -and -not $inQuotes) {
+            if ($current.Length -gt 0) {
+                $tokens.Add($current.ToString())
+                [void]$current.Clear()
+            }
+        } else {
+            [void]$current.Append($ch)
+        }
+    }
+    if ($current.Length -gt 0) { $tokens.Add($current.ToString()) }
+    return @($tokens.ToArray())
 }
 
 function Invoke-ResultComposer {

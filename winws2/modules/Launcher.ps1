@@ -23,6 +23,8 @@ function Start-Zapret {
     }
 
     $winwsDir = Split-Path $winws -Parent
+    # Корень проекта = родитель bin\
+    $projectRoot = Split-Path $winwsDir -Parent
 
     # Сначала гасим возможные старые процессы
     Get-Process (Get-ProcName) -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -31,7 +33,7 @@ function Start-Zapret {
     try {
         $proc = Start-Process -FilePath $winws `
                               -ArgumentList $StrategyLine `
-                              -WorkingDirectory $winwsDir `
+                              -WorkingDirectory $projectRoot `
                               -PassThru -WindowStyle Minimized
 
         Start-Sleep -Milliseconds 700

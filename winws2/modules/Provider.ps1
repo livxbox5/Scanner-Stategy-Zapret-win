@@ -465,18 +465,27 @@ function Build-ProviderCommand {
     $blobDef = Get-Winws2BlobDefs
 
     $hl = ""
+    $he = ""
     if ($Global:ZapretState.TxtPath -and (Test-Path $Global:ZapretState.TxtPath)) {
         $name = $Global:ZapretState.Hostlist
         if (-not $name) { $name = 'list-general.txt' }
         $f = Join-Path $Global:ZapretState.TxtPath $name
         if (Test-Path $f) { $hl = " --hostlist=`"$($f -replace '\\','/')`"" }
+
+        # ─── Глобальные exclude: list-exclude.txt + list-exclude-user.txt ───
+        foreach ($n in @('list-exclude.txt','list-exclude-user.txt') | Select-Object -Unique) {
+            $ef = Join-Path $Global:ZapretState.TxtPath $n
+            if (Test-Path $ef) {
+                $he += " --hostlist-exclude=`"$($ef -replace '\\','/')`""
+            }
+        }
     }
 
     $foolSuf = Get-Winws2FoolSuffix
     $globExt = Get-Winws2GlobalExtras
 
     $wf = "--wf-tcp-out=443 --wf-tcp-in=443 --wf-udp-out=443 --wf-udp-in=443"
-    $head = "$wf $luaInit $blobDef $globExt".Trim()
+    $head = "$wf$he $luaInit $blobDefs $globExt".Trim()
 
     $action = switch ($Kind) {
         'fake+multisplit' {

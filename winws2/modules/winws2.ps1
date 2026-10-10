@@ -4,10 +4,10 @@
 #  Функции, специфичные для zapret2:
 #    Find-Winws2LuaScripts        — автопоиск zapret-lib.lua / zapret-antidpi.lua
 #    Test-Winws2Ready             — проверка winws2.exe + dll + lua
-#    Get-Winws2LuaInit            — сборка --lua-init=@...
-#    Get-Winws2BlobDefs           — сборка --blob=имя:@путь
-#    New-Winws2StrategyCandidates — генерация Lua-стратегий
-#                                   (с поддержкой ФОКУСА по провайдеру)
+#    Get-Winws2LuaInit            — сборка --lua-init=@... (ОТНОСИТЕЛЬНЫЕ пути)
+#    Get-Winws2BlobDefs           — сборка --blob=имя:@bin/fake/... (ОТНОСИТЕЛЬНЫЕ)
+#    New-Winws2StrategyCandidates — генерация Lua-стратегий с ФОКУСОМ по провайдеру
+#                                   и per-strategy hostlist-exclude
 # ===============================================================
 
 function Resolve-Winws2LuaPath {
@@ -95,6 +95,9 @@ function Test-Winws2Ready {
     }
 }
 
+# ============================================================================
+#  --lua-init (ОТНОСИТЕЛЬНЫЕ пути от корня проекта)
+# ============================================================================
 function Get-Winws2LuaInit {
     param(
         [string]$LuaLib     = $Global:ZapretState.LuaLibPath,
@@ -105,8 +108,8 @@ function Get-Winws2LuaInit {
     $antiFile = Resolve-Winws2LuaPath -Path $LuaAntiDpi -TargetName 'zapret-antidpi.lua'
 
     $parts = @()
-    if ($libFile)  { $parts += "--lua-init=@`"$($libFile  -replace '\\','/')`"" }
-    if ($antiFile) { $parts += "--lua-init=@`"$($antiFile -replace '\\','/')`"" }
+    if ($libFile)  { $parts += "--lua-init=@`"lua/zapret-lib.lua`"" }
+    if ($antiFile) { $parts += "--lua-init=@`"lua/zapret-antidpi.lua`"" }
     return ($parts -join ' ')
 }
 
@@ -118,6 +121,9 @@ function Get-SafeBlobName {
     return $safe
 }
 
+# ============================================================================
+#  --blob (ОТНОСИТЕЛЬНЫЕ пути bin/fake/...)
+# ============================================================================
 function Get-Winws2BlobDefs {
     param([string]$BinPath = $Global:ZapretState.BinPath)
 
@@ -130,7 +136,7 @@ function Get-Winws2BlobDefs {
         $full = Join-Path $BinPath $file
         if (Test-Path $full) {
             $safe = Get-SafeBlobName $name
-            $defs += "--blob=${safe}:@`"$($full -replace '\\','/')`""
+            $defs += "--blob=${safe}:@`"bin/fake/$file`""
         } else {
             Write-Log "blob-файл не найден: $full" "WARN"
         }
@@ -188,6 +194,8 @@ function Get-Winws2GlobalExtras {
 
 # ============================================================================
 #  Генерация стратегий — с ФОКУСОМ по провайдеру
+#  Все пути ОТНОСИТЕЛЬНЫЕ (lua/, bin/fake/, lists/), формат как Generall_ALT1.txt
+#  Exclude-файлы дублируются в КАЖДОЙ стратегии (list-exclude.txt + -user)
 # ============================================================================
 function New-Winws2StrategyCandidates {
     param([string]$TxtDir = $Global:ZapretState.TxtPath)
@@ -204,19 +212,31 @@ function New-Winws2StrategyCandidates {
     $foolSuf  = Get-Winws2FoolSuffix
     $globExt  = Get-Winws2GlobalExtras
 
+    # ─── Глобальная шапка (без exclude — exclude идут в каждой стратегии) ───
     $wf = "--wf-tcp-out=443 --wf-tcp-in=443 --wf-udp-out=443 --wf-udp-in=443"
     $globalPart = "$wf $luaInit $blobDefs $globExt".Trim()
 
-    $hl = ""; $he = ""
+    # ─── per-strategy hostlist (относительный путь) ───
+    $hl = ""
     if ($TxtDir -and (Test-Path $TxtDir)) {
         foreach ($name in @($Global:ZapretState.Hostlist, 'list-general.txt') | Select-Object -Unique) {
             $f = Join-Path $TxtDir $name
-            if (Test-Path $f) { $hl = " --hostlist=`"$($f -replace '\\','/')`""; break }
+            if (Test-Path $f) { $hl = " --hostlist=`"lists/$name`""; break }
         }
-        foreach ($name in @($Global:ZapretState.HostlistExclude, 'list-exclude.txt') | Select-Object -Unique) {
+    }
+
+    # ─── per-strategy hostlist-exclude (относительные пути, в КАЖДОЙ стратегии) ───
+    $he = ""
+    if ($TxtDir -and (Test-Path $TxtDir)) {
+        foreach ($name in @('list-exclude.txt','list-exclude-user.txt')) {
             $f = Join-Path $TxtDir $name
-            if (Test-Path $f) { $he = " --hostlist-exclude=`"$($f -replace '\\','/')`""; break }
+            if (Test-Path $f) {
+                $he += " --hostlist-exclude=`"lists/$name`""
+            }
         }
+    }
+    if ($he -ne "") {
+        Write-Log ("[winws2] per-strategy exclude: {0}" -f $he.Trim()) "INFO"
     }
 
     # ─── Фокус провайдера (из Provider.ps1) ───

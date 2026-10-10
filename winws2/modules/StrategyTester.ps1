@@ -151,6 +151,8 @@ function Test-Strategy {
         Write-Log "winws2.exe не найден" "ERR"; return $null
     }
     $winwsDir = Split-Path $winws -Parent
+    # Корень проекта = родитель bin\
+    $projectRoot = Split-Path $winwsDir -Parent
 
     $procName = Get-ProcName
     Get-Process $procName -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -164,7 +166,7 @@ function Test-Strategy {
 
         $proc = Start-Process -FilePath $winws `
                             -ArgumentList $StrategyLine `
-                            -WorkingDirectory $winwsDir `
+                            -WorkingDirectory $projectRoot `
                             -PassThru `
                             -RedirectStandardOutput $logOut `
                             -RedirectStandardError  $logErr `

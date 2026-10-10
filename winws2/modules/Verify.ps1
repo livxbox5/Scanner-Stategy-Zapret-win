@@ -167,6 +167,23 @@ function Add-Winws2Prelude {
     param([string]$Line)
 
     $prelude = @()
+
+    # ─── ГЛОБАЛЬНЫЕ ИСКЛЮЧЕНИЯ (list-exclude.txt + list-exclude-user.txt) ───
+    # Эти домены winws2 пропускает НАПРЯМУЮ (без обхода).
+    if ($Line -notmatch '--hostlist-exclude') {
+        $txtDir = [string]$Global:ZapretState.TxtPath
+        if ($txtDir -and (Test-Path $txtDir)) {
+            $exPath = @()
+            foreach ($n in @('list-exclude.txt','list-exclude-user.txt') | Select-Object -Unique) {
+                $f = Join-Path $txtDir $n
+                if (Test-Path $f) {
+                    $exPath += " --hostlist-exclude=`"$($f -replace '\\','/')`""
+                }
+            }
+            if ($exPath.Count -gt 0) { $prelude += ($exPath -join '').Trim() }
+        }
+    }
+
     if ($Line -notmatch '(^|\s)--wf-') {
         $prelude += "--wf-tcp-out=443 --wf-tcp-in=443 --wf-udp-out=443 --wf-udp-in=443"
     }
