@@ -22,7 +22,8 @@
 
 ## 🔗 Оригинальные проекты
 
-- **Zapret (оригинал):** [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)
+- **Zapret (Windows):** [bol-van/zapret-win-bundle](https://github.com/bol-van/zapret-win-bundle)
+- **Zapret (оригинал):** [bol-van/zapret].(https://github.com/bol-van/zapret)
 - **Zapret2 (оригинал):** [bol-van/zapret2](https://github.com/bol-van/zapret2)
 - **Сборка Zapret от Flowseal:** [Flowseal/zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube)
 
