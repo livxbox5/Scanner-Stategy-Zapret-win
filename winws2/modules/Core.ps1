@@ -50,6 +50,21 @@ $Global:ZapretState = @{
     LuaFool           = @{}
     Glob              = @{}
 
+    # ─── Новые параметры fooling (zapret2 v0.9.5) ───
+    Fooling           = @{
+        ip_ttl        = ""
+        tcp_seq       = ""
+        tcp_ts        = ""
+        tcp_md5       = ""
+        tcp_flags_set = ""
+        tcp_ts_up     = ""
+        badsum        = ""
+        repeats       = ""
+    }
+
+    # ─── Новые методы (zapret2 v0.9.5) ───
+    NewMethods        = @('syndata','rst','rstack','tls_client_hello_clone','http_hostcase','http_domcase')
+
     # ─── DNS / DoH ───
     DnsServers        = @()
     DnsServerKeys     = @()
@@ -360,9 +375,6 @@ function Import-Settings {
     $v = Get-YamlValue $data 'BinPath';        if ($v) { $Global:ZapretState.BinPath        = [string]$v }
 
     # ─── АВТО-РАЗРЕШЕНИЕ ПАПОК В ФАЙЛЫ ───
-    # Если указана ПАПКА — ищем нужный файл внутри. Если ФАЙЛ — оставляем как есть.
-
-    # Winws2Path: папка bin\ → bin\winws2.exe
     if ($Global:ZapretState.Winws2Path) {
         $p = $Global:ZapretState.Winws2Path.Trim('"').TrimEnd('\','/')
         if (Test-Path $p) {
@@ -380,19 +392,15 @@ function Import-Settings {
         }
     }
 
-    # LuaLibPath: папка lua\ → lua\zapret-lib.lua
     if ($Global:ZapretState.LuaLibPath) {
         $resolved = Resolve-Winws2LuaPath -Path $Global:ZapretState.LuaLibPath -TargetName 'zapret-lib.lua'
         if ($resolved) { $Global:ZapretState.LuaLibPath = $resolved }
     }
 
-    # LuaAntiDpiPath: папка lua\ → lua\zapret-antidpi.lua
     if ($Global:ZapretState.LuaAntiDpiPath) {
         $resolved = Resolve-Winws2LuaPath -Path $Global:ZapretState.LuaAntiDpiPath -TargetName 'zapret-antidpi.lua'
         if ($resolved) { $Global:ZapretState.LuaAntiDpiPath = $resolved }
     }
-
-    # TxtPath / BinPath — остаются папками (скрипт сам читает все .txt / .bin внутри)
 
     # ─── Основное ───
     $v = Get-YamlValue $data 'Tool';                if ($v) { $Global:ZapretState.Tool = [string]$v }
@@ -464,13 +472,20 @@ function Import-Settings {
         Write-Host "  [auto] BinPath не задан или не существует" -ForegroundColor DarkYellow
     }
 
-    # ─── Fooling ───
+    # ─── Fooling (включая НОВЫЕ параметры) ───
     $Global:ZapretState.LuaFool = @{}
     foreach ($k in $data.Keys) {
         if ($k -match '^LuaFool_([A-Za-z0-9_]+)$') {
             $name = $Matches[1]
             $val  = [string]$data[$k]
             if ($val) { $Global:ZapretState.LuaFool[$name] = $val }
+        }
+    }
+
+    # ─── Заполняем Fooling из LuaFool (обратная совместимость) ───
+    foreach ($key in @('ip_ttl','tcp_seq','tcp_ts','tcp_md5','tcp_flags_set','tcp_ts_up','badsum','repeats')) {
+        if ($Global:ZapretState.LuaFool.ContainsKey($key)) {
+            $Global:ZapretState.Fooling[$key] = $Global:ZapretState.LuaFool[$key]
         }
     }
 
@@ -540,6 +555,10 @@ function Import-Settings {
     Write-Host ("  .bin-файлы ({0})" -f $Global:ZapretState.LuaBlobFiles.Count) -ForegroundColor DarkCyan
     Write-Host ("  DNS={0}  DoH={1}" -f $Global:ZapretState.DnsServers.Count, $Global:ZapretState.DohServers.Count) -ForegroundColor Gray
     Write-Host ("  ProviderProfile={0}" -f $Global:ZapretState.ProviderProfile) -ForegroundColor DarkCyan
+    Write-Host ("  Fooling: ip_ttl={0} tcp_md5={1} badsum={2}" -f `
+        $Global:ZapretState.Fooling['ip_ttl'],
+        $Global:ZapretState.Fooling['tcp_md5'],
+        $Global:ZapretState.Fooling['badsum']) -ForegroundColor DarkCyan
     Write-Host "  ────────────────────────────────────────────" -ForegroundColor DarkMagenta
     Write-Host ""
 }

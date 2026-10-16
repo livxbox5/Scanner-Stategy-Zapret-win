@@ -3,6 +3,19 @@
 # ===============================================================
 #  Точка входа для zapret2. Подключает модули, показывает меню.
 #  Работает ТОЛЬКО с winws2.exe + Lua.
+#
+#  Меню (обновлено):
+#    1-5   пути                        -> Settings.ps1
+#    6-9   поиск файлов                -> FileScanner.ps1
+#    10-14 стратегии                   -> StrategyTester.ps1
+#    15-19 диагноскеа5тика                 -> StrategyTester.ps1
+#    20-22 DNS/DoH/settings            -> Dns.ps1, DnsDoH.ps1
+#    23-26 провайдер                   -> Provider.ps1
+#    27-28 проверка результатов        -> Verify.ps1
+#    29    port scanner                -> PortScanner.ps1
+#    30-31 composer/toBat              -> ResultComposer.ps1, ResultToBat.ps1
+#    32    готовые команды             -> Provider.ps1
+#    33    АВТО-ПОДБОР СТРАТЕГИИ        -> Provider.ps1 (Invoke-AutoStrategyFind)
 # ===============================================================
 
 # === ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ===
@@ -125,15 +138,20 @@ function Show-Menu {
     Write-Host "  29. PORT SCANNER (Discord / WhatsApp / YouTube / ...)" -ForegroundColor Cyan
     Write-Host ""
 
-    # ─── 30, 32: Сборка конфига ───
+    # ─── 30-31: Сборка конфига ───
     Write-Host "  ─── Сборка из resultats ───────────────────────────────────" -ForegroundColor DarkGray
     Write-Host "  30. RESULT COMPOSER (resultat.txt -> presets\composed-*.txt)" -ForegroundColor Cyan
     Write-Host "  31. RESULT → PRESET (resultat.txt → presets\composed-*.txt с {{ROOT}})" -ForegroundColor Green
     Write-Host ""
 
-    # ─── 31: Готовые команды ───
+    # ─── 32: Готовые команды ───
     Write-Host "  ─── Команда под провайдера ────────────────────────────────" -ForegroundColor DarkGray
     Write-Host "  32. Собрать ГОТОВУЮ КОМАНДУ под текущего провайдера" -ForegroundColor Green
+    Write-Host ""
+
+    # ─── 33: Авто-подбор ───
+    Write-Host "  ─── Авто-подбор ───────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  33. АВТО-ПОДБОР СТРАТЕГИИ (без blockcheck, в интернет)" -ForegroundColor Green
     Write-Host ""
 
     Write-Host "   0. Выход" -ForegroundColor DarkGray
@@ -251,6 +269,21 @@ while ($true) {
 
         # ─── 32: Готовые команды под провайдера ───
         "32" { Show-ProviderReadyCommands }
+
+        # ─── 33: Авто-подбор стратегии (без blockcheck) ───
+        "33" {
+            $best = Invoke-AutoStrategyFind
+            if (-not $best) {
+                Write-Host ""
+                Write-Host "  Ничего не найдено." -ForegroundColor Yellow
+                Write-Host "  Рекомендации:" -ForegroundColor DarkYellow
+                Write-Host "    • Проверьте пути winws2.exe, Lua-скрипты и hostlist" -ForegroundColor Gray
+                Write-Host "    • Запустите пункт 10 (полный авто-тест) — он ищет тщательнее" -ForegroundColor Gray
+                Write-Host "    • Попробуйте сменить профиль провайдера вручную" -ForegroundColor Gray
+                Read-Host "  Enter..."
+            }
+        }
+
         # ─── 0: Выход // Exit ───
         "0"  { break }
         default { Write-Log "Неверный пункт" "ERR" }

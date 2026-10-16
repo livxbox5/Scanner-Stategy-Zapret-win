@@ -24,6 +24,7 @@ us/
   winws2/ - Одельно winws2 папка
    config/
     settings.yml
+    metholds.yml
    modules/
      Convert.ps1
      Core.ps1
@@ -31,13 +32,31 @@ us/
      DnsDoH.ps1
      FileScanner.ps1
      Launcher.ps1
+     PortScanner.ps1
      Provider.ps1
+     ResultComposer.ps1
+     ResultToBat.ps1
      Settings.ps1
      StrategyTester.ps1
-     Verify.ps1  
-  resoultats/
-   fix-excoding.ps1
-   start.bat
-   startegies.bat
-   ZapretManager.ps1
-  winws2/ - Одельно winws2 папка
+     Verify.ps1
+     Verify.ps1.txt
+     winws2.ps1
+   lists/
+    Discord.txt
+    Exitec.txt
+    ipset-all.txt
+    ipset-all.txt.backup
+    ipset-exclude-user.txt
+    list-exclude-user.txt
+    list-exclude.txt
+    list-general.txt
+    list-google.txt
+    Telegram.txt
+    WhatsApp.txt
+   resoultats/
+    pretest.txt
+    resultat.txt
+  fix-excoding.ps1
+  start.bat
+  startegies.bat
+  ZapretManager.ps1

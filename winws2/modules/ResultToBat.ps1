@@ -4,10 +4,12 @@
 #  Собирает .txt-пресет в формате Generall_ALT1.txt из resultats\*.txt.
 #  Использует ОТНОСИТЕЛЬНЫЕ пути (lua/, bin/fake/, lists/, windivert.filter/).
 #  CWD пресета задаётся start.bat через `cd /d "%ROOT%"`.
+#
+#  ОБНОВЛЕНО: zapret2 v0.9.5 — новые методы, --wf-raw-filter, новые blob-файлы.
 # ===============================================================
 
 # ============================================================================
-#  ПАРСЕР resultats\*.txt
+#  ПАРСЕР resultats\*.txt (с поддержкой новых методов)
 # ============================================================================
 function Get-StrategiesFromFile {
     param([string]$Path)
@@ -136,6 +138,7 @@ function Split-Winws2Args {
 
 # ============================================================================
 #  Генерация .txt-пресета в формате Generall_ALT1.txt
+#  (zapret2 v0.9.5: --wf-raw-filter, новые blob-файлы)
 # ============================================================================
 function New-ComposedPreset {
     param(
@@ -160,7 +163,7 @@ function New-ComposedPreset {
     [void]$sb.AppendLine('#=====================================================')
     [void]$sb.AppendLine('')
 
-    # ── Глобальная шапка (относительные пути) ──
+    # ── Глобальная шапка (относительные пути, zapret2 v0.9.5) ──
     [void]$sb.AppendLine('--debug=0')
     [void]$sb.AppendLine('--ctrack-disable=0')
     [void]$sb.AppendLine('--ipcache-lifetime=8400')
@@ -172,10 +175,11 @@ function New-ComposedPreset {
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('--wf-tcp-out=80,443,2053,2083,2087,2096,8443,12')
     [void]$sb.AppendLine('--wf-udp-out=443,19294-19344,50000-50100,12')
-    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.discord_media.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.stun.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.wireguard.txt"')
-    [void]$sb.AppendLine('--wf-raw-part=@"windivert.filter/windivert_part.quic_initial_ietf.txt"')
+    # НОВОЕ: --wf-raw-filter вместо --wf-raw-part
+    [void]$sb.AppendLine('--wf-raw-filter=@"windivert.filter/windivert_part.discord_media.txt"')
+    [void]$sb.AppendLine('--wf-raw-filter=@"windivert.filter/windivert_part.stun.txt"')
+    [void]$sb.AppendLine('--wf-raw-filter=@"windivert.filter/windivert_part.wireguard.txt"')
+    [void]$sb.AppendLine('--wf-raw-filter=@"windivert.filter/windivert_part.quic_initial_ietf.txt"')
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('--blob=tls_google:@"bin/fake/tls_clienthello_www_google_com.bin"')
     [void]$sb.AppendLine('--blob=tls_max:@"bin/fake/tls_clienthello_max_ru.bin"')
@@ -185,6 +189,11 @@ function New-ComposedPreset {
     [void]$sb.AppendLine('--blob=game_udp:@"bin/fake/quic_initial_dbankcloud_ru.bin"')
     [void]$sb.AppendLine('--blob=http_iana:@"bin/fake/http_iana_org.bin"')
     [void]$sb.AppendLine('--blob=zero:@"bin/fake/zero_512.bin"')
+    # НОВЫЕ blob-файлы v0.9.5
+    [void]$sb.AppendLine('--blob=tls_alert:@"bin/fake/tls_alert.bin"')
+    [void]$sb.AppendLine('--blob=dns:@"bin/fake/dns.bin"')
+    [void]$sb.AppendLine('--blob=sip_register:@"bin/fake/sip_register.bin"')
+    [void]$sb.AppendLine('--blob=dtls_serverhello:@"bin/fake/dtls_serverhello.bin"')
     [void]$sb.AppendLine('')
 
     # ── Стратегии ──

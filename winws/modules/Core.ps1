@@ -5,6 +5,9 @@
 #  конвертеры (Int, Bool), YAML-парсер, Write-Log.
 #
 #  Только zapret1 (winws.exe).
+#
+#  Обновлено для zapret v1 (актуальная документация bol-van/zapret):
+#    - Добавлены поля TcpFlagsSet, TcpFlagsUnset, AnyProtocol, Starts
 # ===============================================================
 
 # === CONFIG PATH ===
@@ -43,6 +46,10 @@ $Global:ZapretState = @{
     SplitPositions    = @()
     Foolings          = @()
     Autottls          = @()
+    TcpFlagsSet       = @()
+    TcpFlagsUnset     = @()
+    AnyProtocol       = 0
+    Starts            = @()
 
     # ─── Именованные Fake TLS ───
     FakeTLS_Google    = ""
@@ -280,6 +287,9 @@ function Load-Settings {
     $Global:ZapretState.SplitPositions = @()
     $Global:ZapretState.Foolings       = @()
     $Global:ZapretState.Autottls       = @()
+    $Global:ZapretState.TcpFlagsSet    = @()
+    $Global:ZapretState.TcpFlagsUnset  = @()
+    $Global:ZapretState.Starts         = @()
 
     foreach ($k in $data.Keys) {
         $val = [string]$data[$k]
@@ -296,7 +306,20 @@ function Load-Settings {
         elseif ($k -match '^Autottl_(.+)$') {
             $Global:ZapretState.Autottls += $val
         }
+        elseif ($k -match '^TcpFlagsSet_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.TcpFlagsSet += $val }
+        }
+        elseif ($k -match '^TcpFlagsUnset_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.TcpFlagsUnset += $val }
+        }
+        elseif ($k -match '^Start_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.Starts += $val }
+        }
     }
+
+    # ─── AnyProtocol ───
+    $v = Get-YamlValue $data 'AnyProtocol'
+    if ($null -ne $v) { $Global:ZapretState.AnyProtocol = ConvertTo-Int $v 0 }
 
     # ─── Именованные Fake* ───
     foreach ($pair in @(
@@ -396,6 +419,9 @@ function Load-Settings {
     Write-Host ("  Methods={0} SplitPos={1} Foolings={2} Autottls={3}" -f `
         $Global:ZapretState.Methods.Count, $Global:ZapretState.SplitPositions.Count, `
         $Global:ZapretState.Foolings.Count, $Global:ZapretState.Autottls.Count) -ForegroundColor Gray
+    Write-Host ("  TcpFlagsSet={0} TcpFlagsUnset={1} AnyProtocol={2} Starts={3}" -f `
+        $Global:ZapretState.TcpFlagsSet.Count, $Global:ZapretState.TcpFlagsUnset.Count, `
+        $Global:ZapretState.AnyProtocol, $Global:ZapretState.Starts.Count) -ForegroundColor Gray
     Write-Host ("  Pools: TLS={0} QUIC={1} UDP={2}" -f `
         $Global:ZapretState.FakeTLSPool.Count, `
         $Global:ZapretState.FakeQUICPool.Count, `
@@ -423,7 +449,7 @@ function Save-Settings {
     if (Test-Path $file) {
         $raw = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8)
         foreach ($line in ($raw -split "`r?`n")) {
-            if ($line -match '^\s*#?\s*(Method_|SplitPos_|Fooling_|Autottl_|Repeats_|Cutoff_|FakeTLS_|FakeQUIC_|FakeUDP_|SplitSeqovl|Hostfakesplit_|FakedsplitPattern_|WfTcp|WfUdp|FilterL7|WfIface|WfL3|UseIpsetExclude|UseHostlistExclude|Debug)') {
+            if ($line -match '^\s*#?\s*(Method_|SplitPos_|Fooling_|Autottl_|Repeats_|Cutoff_|FakeTLS_|FakeQUIC_|FakeUDP_|SplitSeqovl|Hostfakesplit_|FakedsplitPattern_|WfTcp|WfUdp|FilterL7|WfIface|WfL3|UseIpsetExclude|UseHostlistExclude|Debug|TcpFlagsSet_|TcpFlagsUnset_|Start_|AnyProtocol)') {
                 $preserved += $line
             }
         }

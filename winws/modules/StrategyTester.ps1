@@ -1,12 +1,13 @@
-﻿# StrategyTester.ps1 — Версия 12
+﻿# StrategyTester.ps1 — Версия 13
 # Пре-тест + полный прогон, авто-поиск заблокированных, RandomCount,
 # PreTestAllDomains — режим теста по ВСЕМ доменам hostlist.
 #
 # Работает ТОЛЬКО с zapret1 (winws.exe).
 #
-# v12:
-#   - Только один движок — winws.exe
-#   - Используется New-StrategyCandidates
+# v13:
+#   - Добавлена поддержка --dpi-desync-tcp-flags-set/unset
+#   - Добавлена поддержка --dpi-desync-any-protocol
+#   - Добавлена поддержка --dpi-desync-start
 # ═════════════════════════════════════════════════════════════
 #  HTTP
 # ═════════════════════════════════════════════════════════════
@@ -126,9 +127,9 @@ function Test-Strategy {
         }
     }
 
-    $winws = $Global:ZapretState.Winws2Path
+    $winws = $Global:ZapretState.WinwsPath
     if (-not $winws -or -not (Test-Path $winws)) {
-        Write-Log "winws2.exe не найден" "ERR"; return $null
+        Write-Log "winws.exe не найден" "ERR"; return $null
     }
     $winwsDir = Split-Path $winws -Parent
 
@@ -137,7 +138,7 @@ function Test-Strategy {
     Start-Sleep -Milliseconds 300
 
     # ─── Пишем стратегию во временный .bat (CP866) ───
-    $tempBat = Join-Path $env:TEMP ("winws2_strat_" + [guid]::NewGuid().ToString('N') + ".bat")
+    $tempBat = Join-Path $env:TEMP ("winws_strat_" + [guid]::NewGuid().ToString('N') + ".bat")
     $batContent =
         "@echo off`r`n" +
         "cd /d `"$winwsDir`"`r`n" +
@@ -150,8 +151,8 @@ function Test-Strategy {
     }
 
     # Лог stderr/stdout
-    $stdoutLog = Join-Path $env:TEMP ("winws2_out_" + [guid]::NewGuid().ToString('N') + ".log")
-    $stderrLog = Join-Path $env:TEMP ("winws2_err_" + [guid]::NewGuid().ToString('N') + ".log")
+    $stdoutLog = Join-Path $env:TEMP ("winws_out_" + [guid]::NewGuid().ToString('N') + ".log")
+    $stderrLog = Join-Path $env:TEMP ("winws_err_" + [guid]::NewGuid().ToString('N') + ".log")
 
     $proc = $null
     try {
@@ -169,7 +170,7 @@ function Test-Strategy {
 
     Start-Sleep -Milliseconds 1500
 
-    # Проверяем, что winws2 реально жив
+    # Проверяем, что winws реально жив
     $winwsProc = Get-Process $procName -ErrorAction SilentlyContinue
     if (-not $winwsProc) {
         $code = "?"
@@ -181,15 +182,15 @@ function Test-Strategy {
         try { if (Test-Path $stdoutLog) { $outText = Get-Content $stdoutLog -Raw -ErrorAction SilentlyContinue } } catch { }
 
         if (-not $Quiet) {
-            Write-Host ("        [SKIP] winws2 упал, код {0}" -f $code) -ForegroundColor DarkRed
+            Write-Host ("        [SKIP] winws упал, код {0}" -f $code) -ForegroundColor DarkRed
             if ($errText) {
-                Write-Host "        --- stderr winws2 ---" -ForegroundColor DarkYellow
+                Write-Host "        --- stderr winws ---" -ForegroundColor DarkYellow
                 ($errText -split "`r?`n") | Select-Object -First 10 | ForEach-Object {
                     if ($_) { Write-Host ("        {0}" -f $_) -ForegroundColor DarkYellow }
                 }
             }
             if ($outText -and -not $errText) {
-                Write-Host "        --- stdout winws2 ---" -ForegroundColor DarkYellow
+                Write-Host "        --- stdout winws ---" -ForegroundColor DarkYellow
                 ($outText -split "`r?`n") | Select-Object -First 10 | ForEach-Object {
                     if ($_) { Write-Host ("        {0}" -f $_) -ForegroundColor DarkYellow }
                 }
@@ -346,6 +347,10 @@ function New-StrategyCandidates {
     $splitPos  = @($Global:ZapretState.SplitPositions | Where-Object { $null -ne $_ })
     $foolings  = @($Global:ZapretState.Foolings       | Where-Object { $null -ne $_ })
     $autottls  = @($Global:ZapretState.Autottls       | Where-Object { $null -ne $_ })
+    $tcpFlagsSet   = @($Global:ZapretState.TcpFlagsSet   | Where-Object { $null -ne $_ })
+    $tcpFlagsUnset = @($Global:ZapretState.TcpFlagsUnset | Where-Object { $null -ne $_ })
+    $anyProtocol   = $Global:ZapretState.AnyProtocol
+    $starts        = @($Global:ZapretState.Starts | Where-Object { $null -ne $_ })
 
     if ($methods.Count -eq 0) {
         Write-Log "Нет доступных методов для генерации стратегий." "ERR"
@@ -397,6 +402,24 @@ function New-StrategyCandidates {
                     if ($sp) { $parts += " --dpi-desync-split-pos=$sp" }
                     if ($f)  { $parts += " --dpi-desync-fooling=$f" }
                     if ($a)  { $parts += " --dpi-desync-autottl=$a" }
+
+                    # ─── TCP Flags ───
+                    foreach ($tf in $tcpFlagsSet) {
+                        if ($tf) { $parts += " --dpi-desync-tcp-flags-set=$tf" }
+                    }
+                    foreach ($tf in $tcpFlagsUnset) {
+                        if ($tf) { $parts += " --dpi-desync-tcp-flags-unset=$tf" }
+                    }
+
+                    # ─── Any Protocol ───
+                    if ($anyProtocol -eq 1) {
+                        $parts += " --dpi-desync-any-protocol=1"
+                    }
+
+                    # ─── Start ───
+                    foreach ($st in $starts) {
+                        if ($st) { $parts += " --dpi-desync-start=$st" }
+                    }
 
                     if ($needsFake) {
                         $pool = if ($Global:ZapretState.ForceBin -and $allBinFiles.Count -gt 0) {

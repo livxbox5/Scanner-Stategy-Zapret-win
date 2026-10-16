@@ -1,14 +1,13 @@
 ﻿# ===============================================================
-# === PROVIDER (Provider.ps1) ===
+# === PROVIDER (Provider.ps1) — winws.exe / zapret1 ===
 # ===============================================================
 #  Умный подбор под провайдера: авто-детект ISP через ip-api.com,
 #  встроенные presets, база найденных стратегий в config/providers.json.
-#  Меню: пункты 21-24.
 #
-#  v2:
-#    - 'Rostelecom' и 'default' расширены fakedsplit/hostfakesplit/syndata
-#    - 'Rt.ru' → 'Rt\.ru' (экранирование точки в regex)
-#    - удалён дубль комментария в шапке
+#  Меню: пункты 21-24 (инфо, умный подбор, обновление, очистка).
+#  Авто-подбор стратегии: пункт 28 в ZapretManager.ps1.
+#
+#  Актуально для zapret v1 (bol-van/zapret).
 # ===============================================================
 
 $script:ProviderPresets = @{
@@ -19,9 +18,12 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit','syndata'
         )
         SplitPos  = @('midsld','1','2','4')
-        Foolings  = @('badseq','ts','badsum','md5sig')
+        Foolings  = @('badseq','ts','badsum','md5sig','datanoack')
         Autottls  = @('','2','4','8')
-        Note      = 'Ростелеком: fake / split2 с badseq; проверяем fakedsplit, hostfakesplit, syndata'
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
+        Note      = 'Ростелеком: fake + split2 с badseq; проверяем fakedsplit, hostfakesplit, syndata'
     }
     'MTS' = @{
         Patterns  = @('MTS','МТС','Mobile TeleSystems','MTS PJSC')
@@ -30,8 +32,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1','4')
-        Foolings  = @('ts','badseq','badsum')
+        Foolings  = @('ts','badseq','badsum','datanoack')
         Autottls  = @('','2','4','8')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'МТС: split2 и multidisorder с ts'
     }
     'Beeline' = @{
@@ -41,8 +46,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('md5sig','ts','badseq')
+        Foolings  = @('md5sig','ts','badseq','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Билайн: multidisorder с md5sig'
     }
     'Megafon' = @{
@@ -52,8 +60,11 @@ $script:ProviderPresets = @{
             'hostfakesplit','syndata'
         )
         SplitPos  = @('1','midsld','2','4')
-        Foolings  = @('badseq','ts','badsum')
+        Foolings  = @('badseq','ts','badsum','datanoack')
         Autottls  = @('','4','8','2')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Мегафон: fakedsplit с badseq и autottl=4'
     }
     'ER-Telecom' = @{
@@ -63,8 +74,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badsum','badseq','ts')
+        Foolings  = @('badsum','badseq','ts','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Дом.ру: split2 и disorder2'
     }
     'TTK' = @{
@@ -74,8 +88,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','4')
-        Foolings  = @('badseq','ts','badsum')
+        Foolings  = @('badseq','ts','badsum','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'ТТК: disorder2 и split2'
     }
     'MGTS' = @{
@@ -85,8 +102,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('1','midsld','2')
-        Foolings  = @('ts','badseq','badsum')
+        Foolings  = @('ts','badseq','badsum','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'МГТС: split2 и disorder2'
     }
     'Tele2' = @{
@@ -96,8 +116,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1')
-        Foolings  = @('ts','badseq','badsum')
+        Foolings  = @('ts','badseq','badsum','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Tele2: multisplit'
     }
     'Yota' = @{
@@ -107,8 +130,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badseq','ts','badsum')
+        Foolings  = @('badseq','ts','badsum','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Yota: split2 с badseq'
     }
     'Tattelecom' = @{
@@ -118,8 +144,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badseq','ts','md5sig')
+        Foolings  = @('badseq','ts','md5sig','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Таттелеком: split2 и disorder2'
     }
     'Ufanet' = @{
@@ -129,8 +158,11 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1')
-        Foolings  = @('badseq','ts','badsum')
+        Foolings  = @('badseq','ts','badsum','datanoack')
         Autottls  = @('','2','4')
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
         Note      = 'Уфанет: split2 и multisplit'
     }
     'default' = @{
@@ -140,12 +172,18 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit','syndata'
         )
         SplitPos  = @('1','2','4','midsld')
-        Foolings  = @('ts','badseq','badsum','md5sig')
+        Foolings  = @('ts','badseq','badsum','md5sig','datanoack')
         Autottls  = @('','2','4','8')
-        Note      = 'Универсальный набор'
+        TcpFlagsSet   = @()
+        TcpFlagsUnset = @()
+        AnyProto      = 0
+        Note      = 'Универсальный набор для zapret1'
     }
 }
 
+# ─────────────────────────────────────────────────────────────
+#  Определение провайдера
+# ─────────────────────────────────────────────────────────────
 function Get-ProviderInfo {
     param([switch]$Force)
 
@@ -228,8 +266,11 @@ function Apply-ProviderPreset {
     $Global:ZapretState.SplitPositions = @($preset.SplitPos)
     $Global:ZapretState.Foolings       = @($preset.Foolings)
     $Global:ZapretState.Autottls       = @($preset.Autottls)
+    $Global:ZapretState.TcpFlagsSet    = @($preset.TcpFlagsSet)
+    $Global:ZapretState.TcpFlagsUnset  = @($preset.TcpFlagsUnset)
+    $Global:ZapretState.AnyProtocol    = $preset.AnyProto
 
-    Write-Host ("  Применён preset '{0}'" -f $ProfileName) -ForegroundColor Gray
+    Write-Host ("  Применён preset '{0}' (zapret1)" -f $ProfileName) -ForegroundColor Gray
     Write-Host ("    Methods  : {0}" -f ($preset.Methods  -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    SplitPos : {0}" -f ($preset.SplitPos -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    Foolings : {0}" -f ($preset.Foolings -join ', ')) -ForegroundColor DarkGray
@@ -244,29 +285,19 @@ function Get-ProviderDbPath {
 
 function Load-ProviderDb {
     $file = Get-ProviderDbPath
-
-    $empty = [pscustomobject]@{
-        Version   = 1
-        Providers = [pscustomobject]@{}
-    }
-
+    $empty = [pscustomobject]@{ Version = 1; Providers = [pscustomobject]@{} }
     if (-not (Test-Path $file)) { return $empty }
-
     try {
         $raw = Get-Content $file -Raw -Encoding UTF8
         if (-not $raw -or $raw.Trim() -eq '') { return $empty }
-
         $obj = $raw | ConvertFrom-Json
         if (-not $obj) { return $empty }
-
         if (-not $obj.PSObject.Properties['Providers']) {
             $obj | Add-Member -NotePropertyName Providers `
                              -NotePropertyValue ([pscustomobject]@{}) -Force
         }
         return $obj
-    } catch {
-        return $empty
-    }
+    } catch { return $empty }
 }
 
 function Save-ProviderDb {
@@ -288,9 +319,7 @@ function Save-ProviderStrategy {
         [int]$Score = 0,
         [int]$Total = 0
     )
-
     if (-not $ProfileName -or -not $Strategy) { return }
-
     $db = Load-ProviderDb
 
     if (-not $db.Providers.$ProfileName) {
@@ -303,7 +332,6 @@ function Save-ProviderStrategy {
     }
 
     $entry = $db.Providers.$ProfileName
-
     $exists = $false
     foreach ($s in $entry.Strategies) {
         if ($s.Cmd -eq $Strategy) {
@@ -334,12 +362,10 @@ function Save-ProviderStrategy {
 
 function Get-KnownStrategies {
     param([string]$ProfileName)
-
     $db = Load-ProviderDb
     if (-not $db.Providers.$ProfileName) { return @() }
     $entry = $db.Providers.$ProfileName
     if (-not $entry.Strategies) { return @() }
-
     return @($entry.Strategies | Sort-Object -Property @{Expression={$_.Score};Descending=$true})
 }
 
@@ -369,7 +395,6 @@ function Show-ProviderInfo {
     } else {
         Write-Host "  Известных: нет (нужен первый тест)" -ForegroundColor DarkGray
     }
-
     Write-Host "  ────────────────────────────────────────────" -ForegroundColor DarkCyan
     Write-Host ""
 
@@ -469,5 +494,268 @@ function Update-ProviderCache {
         Write-Log "Не удалось обновить: $($info.Err)" "ERR"
     } else {
         Write-Log "Провайдер: $($info.ISP)  ($($info.City), $($info.ASN))"
+        $profile = Find-ProviderProfile -IspName $info.ISP -ASN $info.ASN
+        Set-CurrentProviderProfile -ProfileName $profile
+    }
+}
+
+# ═════════════════════════════════════════════════════════════
+#  АВТО-ПОДБОР СТРАТЕГИИ (без blockcheck) — zapret1
+# ═════════════════════════════════════════════════════════════
+#  Использует New-StrategyCandidates и Test-Strategy из StrategyTester.ps1.
+#
+#  Алгоритм:
+#    1. Проверяет уже известные рабочие стратегии из базы (если не -SkipKnown).
+#    2. Генерирует кандидатов через New-StrategyCandidates.
+#    3. Ограничивает количество (по умолчанию 50) и перемешивает.
+#    4. По очереди тестирует каждую на доменах.
+#    5. Сохраняет все успешные в базу провайдера.
+#    6. Возвращает лучшую.
+# ═════════════════════════════════════════════════════════════
+
+function Get-AutoTestDomains {
+    param([string[]]$Override = @())
+
+    if ($Override -and $Override.Count -gt 0) { return $Override }
+
+    $defaults = @(
+        'https://www.youtube.com',
+        'https://discord.com',
+        'https://www.google.com',
+        'https://web.telegram.org'
+    )
+
+    try {
+        if (Get-Command Get-DomainsFromHostlist -ErrorAction SilentlyContinue) {
+            $hl = @(Get-DomainsFromHostlist -Max 200)
+            if ($hl.Count -gt 0) {
+                $blocked = @()
+                foreach ($u in $hl) {
+                    $r = Test-Endpoint -Url $u -TimeoutSec 3
+                    if (-not $r.Ok) { $blocked += $u }
+                    if ($blocked.Count -ge 6) { break }
+                }
+                if ($blocked.Count -ge 3) { return $blocked }
+            }
+        }
+    } catch { }
+
+    return $defaults
+}
+
+function Invoke-AutoStrategyFind {
+    param(
+        [string]$ProfileName = $Global:ZapretState.ProviderProfile,
+        [string[]]$TestDomains = @(),
+        [int]$MaxStrategies = 50,
+        [switch]$SkipKnown
+    )
+
+    if (-not (Test-Admin)) {
+        Write-Log "Нужны права администратора" "ERR"; return $null
+    }
+
+    Write-Host ""
+    Write-Host "  ╔════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "  ║       АВТО-ПОДБОР СТРАТЕГИИ (zapret1, без blockcheck)   ║" -ForegroundColor Cyan
+    Write-Host "  ╚════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host ""
+
+    $ctx = Show-ProviderInfo
+    if ($ctx) {
+        if (-not $ProfileName) { $ProfileName = $ctx.Profile }
+        Write-Host ("  Профиль для сохранения: {0}" -f $ProfileName) -ForegroundColor Green
+    }
+    if (-not $ProfileName) { $ProfileName = 'default' }
+
+    if (-not $TestDomains -or $TestDomains.Count -eq 0) {
+        Write-Host "  Подбираю тестовые домены..." -ForegroundColor DarkGray
+        $TestDomains = @(Get-AutoTestDomains)
+    }
+
+    Write-Host ("  Тестовых доменов: {0}" -f $TestDomains.Count) -ForegroundColor Gray
+    foreach ($d in $TestDomains) {
+        Write-Host ("    • {0}" -f $d) -ForegroundColor DarkGray
+    }
+    Write-Host ""
+
+    # ─── Шаг 1: Проверка известных стратегий ───
+    if (-not $SkipKnown) {
+        $known = @(Get-KnownStrategies -ProfileName $ProfileName)
+        if ($known.Count -gt 0) {
+            Write-Host ("  ─── Проверка {0} известных стратегий ────────────────" -f $known.Count) -ForegroundColor DarkCyan
+            $ki = 0
+            foreach ($s in $known) {
+                $ki++
+                Write-Host ("    [{0}/{1}] проверяю..." -f $ki, $known.Count) -ForegroundColor DarkGray
+                $r = Test-Strategy -StrategyLine $s.Cmd -Domains $TestDomains -Quiet
+                if ($r -and $r.Score -gt 0) {
+                    $pct = [math]::Round($r.Score / $r.Total * 100, 1)
+                    Write-Host ("        работает: {0}/{1} ({2}%)" -f $r.Score, $r.Total, $pct) -ForegroundColor Green
+                    if ($r.Score -eq $r.Total) {
+                        Write-Host "        [OK] Известная стратегия работает идеально!" -ForegroundColor Green
+                        Write-Host ""
+                        Save-ProviderStrategy -ProfileName $ProfileName `
+                            -Strategy $s.Cmd -Score $r.Score -Total $r.Total
+                        Write-Host ("  {0}" -f $s.Cmd) -ForegroundColor White
+                        Write-Host ""
+                        Read-Host "  Enter..."
+                        return [pscustomobject]@{ Method = "known"; Line = $s.Cmd; Score = $r.Score; Total = $r.Total }
+                    }
+                }
+            }
+            Write-Host ""
+        }
+    }
+
+    # ─── Шаг 2: Генерация кандидатов ───
+    Write-Host "  Генерация стратегий-кандидатов..." -ForegroundColor DarkCyan
+    $candidates = @(New-StrategyCandidates)
+    if ($candidates.Count -eq 0) {
+        Write-Log "Нет кандидатов для тестирования" "ERR"
+        Read-Host "  Enter..."; return $null
+    }
+    Write-Host ("  Всего сгенерировано: {0}" -f $candidates.Count) -ForegroundColor Gray
+
+    # ─── Шаг 3: Ограничение и перемешивание ───
+    if ($candidates.Count -gt $MaxStrategies) {
+        $candidates = @($candidates | Get-Random -Count $MaxStrategies)
+        Write-Host ("  Ограничено до: {0}" -f $MaxStrategies) -ForegroundColor Yellow
+    }
+    Write-Host ""
+
+    # ─── Шаг 4: Перебор ───
+    $results = New-Object System.Collections.Generic.List[object]
+    $bestStrategy = $null
+    $bestScore = -1
+    $startTime = Get-Date
+    $i = 0
+
+    Write-Host "  ─── Перебор ──────────────────────────────────────────" -ForegroundColor DarkCyan
+    Write-Host ""
+
+    foreach ($c in $candidates) {
+        $i++
+        $elapsed = ((Get-Date) - $startTime).TotalSeconds
+        $eta = if ($i -gt 1) {
+            [math]::Round(($elapsed / ($i - 1)) * ($candidates.Count - $i + 1) / 60, 1)
+        } else { '?' }
+
+        Write-Host ("  [{0,3}/{1}] ETA {2} мин  " -f $i, $candidates.Count, $eta) -ForegroundColor DarkCyan -NoNewline
+        $methodShort = if ($c.Method.Length -gt 70) { $c.Method.Substring(0, 67) + '...' } else { $c.Method }
+        Write-Host $methodShort -ForegroundColor White
+
+        $result = Test-Strategy -StrategyLine $c.Line -Domains $TestDomains -Quiet
+        if ($null -eq $result) { continue }
+
+        $pct = if ($result.Total -gt 0) { [math]::Round($result.Score / $result.Total * 100, 1) } else { 0 }
+        $color = if ($pct -eq 100) { 'Green' }
+                 elseif ($pct -ge 75) { 'Yellow' }
+                 elseif ($pct -gt 0) { 'DarkYellow' }
+                 else { 'DarkGray' }
+        Write-Host ("        Результат: {0}/{1} ({2}%)" -f $result.Score, $result.Total, $pct) -ForegroundColor $color
+
+        if ($result.Score -gt 0) {
+            $results.Add([pscustomobject]@{
+                Method = $c.Method; Line = $c.Line
+                Score = $result.Score; Total = $result.Total; Pct = $pct
+            }) | Out-Null
+
+            Save-ProviderStrategy -ProfileName $ProfileName `
+                -Strategy $c.Line -Score $result.Score -Total $result.Total
+
+            if ($result.Score -gt $bestScore) {
+                $bestScore = $result.Score
+                $bestStrategy = $c
+            }
+
+            if ($result.Score -eq $result.Total) {
+                Write-Host "        [OK] Идеальная стратегия найдена — выходим." -ForegroundColor Green
+                break
+            }
+        }
+    }
+
+    $totalTime = [math]::Round(((Get-Date) - $startTime).TotalMinutes, 1)
+    Write-Host ""
+
+    # ─── Шаг 5: Итоги ───
+    Write-Host "  ╔════════════════════════════════════════════════════════╗" -ForegroundColor Magenta
+    Write-Host "  ║                      ИТОГИ                             ║" -ForegroundColor Magenta
+    Write-Host "  ╚════════════════════════════════════════════════════════╝" -ForegroundColor Magenta
+    Write-Host ("  Время:          {0} мин" -f $totalTime) -ForegroundColor Gray
+    Write-Host ("  Проверено:      {0}" -f $i) -ForegroundColor Gray
+    Write-Host ("  Успешных:       {0}" -f $results.Count) -ForegroundColor $(if ($results.Count -gt 0) { "Green" } else { "Red" })
+    Write-Host ""
+
+    if ($results.Count -eq 0) {
+        Write-Log "Ни одна стратегия не дала положительного результата." "WARN"
+        Read-Host "  Enter..."
+        return $null
+    }
+
+    $top = @($results | Sort-Object -Property @{Expression='Score';Descending=$true} | Select-Object -First 5)
+    Write-Host "  ─── ТОП-5 РАБОЧИХ ────────────────────────────────────" -ForegroundColor Green
+    $ri = 0
+    foreach ($r in $top) {
+        $ri++
+        $col = if ($r.Pct -eq 100) { "Green" } elseif ($r.Pct -ge 75) { "Yellow" } else { "White" }
+        Write-Host ("  [{0}] [{1}/{2}] {3,5}%   {4}" -f $ri, $r.Score, $r.Total, $r.Pct, $r.Method) -ForegroundColor $col
+        $short = if ($r.Line.Length -gt 120) { $r.Line.Substring(0, 117) + '...' } else { $r.Line }
+        Write-Host ("      {0}" -f $short) -ForegroundColor DarkGray
+    }
+    Write-Host ""
+
+    if ($bestStrategy) {
+        Write-Host "  ─── ЛУЧШАЯ СТРАТЕГИЯ ────────────────────────────────" -ForegroundColor Green
+        Write-Host ("  Оценка: {0}/{1}" -f $bestScore, $TestDomains.Count) -ForegroundColor Green
+        Write-Host ("  Строка: {0}" -f $bestStrategy.Line) -ForegroundColor White
+        Write-Host ""
+    }
+
+    # ─── Отчёт ───
+    try {
+        $repDir = Join-Path (Split-Path $Global:ZapretState.ConfigFile -Parent) '..\resultats'
+        $repDir = [System.IO.Path]::GetFullPath($repDir)
+        if (-not (Test-Path $repDir)) { New-Item -ItemType Directory -Path $repDir -Force | Out-Null }
+        $repFile = Join-Path $repDir 'auto_find_zapret1.txt'
+
+        $sb = New-Object System.Text.StringBuilder
+        [void]$sb.AppendLine("# ═══════════════════════════════════════════════════════════════")
+        [void]$sb.AppendLine("# Auto-Strategy-Find (zapret1 / winws.exe)")
+        [void]$sb.AppendLine("# Дата:     $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
+        [void]$sb.AppendLine("# Профиль:  $ProfileName")
+        [void]$sb.AppendLine("# Время:    $totalTime мин")
+        [void]$sb.AppendLine("# Проверено: $i")
+        [void]$sb.AppendLine("# Успешных: $($results.Count)")
+        [void]$sb.AppendLine("# Домены:   $($TestDomains -join ', ')")
+        [void]$sb.AppendLine("# ═══════════════════════════════════════════════════════════════")
+        [void]$sb.AppendLine("")
+        $ri = 0
+        foreach ($r in $top) {
+            $ri++
+            [void]$sb.AppendLine(("# [{0}] [{1}/{2}] {3}%   {4}" -f $ri, $r.Score, $r.Total, $r.Pct, $r.Method))
+            [void]$sb.AppendLine("--new")
+            [void]$sb.AppendLine($r.Line)
+            [void]$sb.AppendLine("")
+        }
+        Set-Content -Path $repFile -Value $sb.ToString() -Encoding UTF8
+        Write-Host ("  Отчёт: {0}" -f $repFile) -ForegroundColor Green
+    } catch { }
+
+    Write-Host ""
+    Write-Host "  Запустить лучшую сейчас? (Y/N): " -NoNewline -ForegroundColor Cyan
+    $ans = Read-Host
+    if ($ans -match '^[YyДд]' -and $bestStrategy) {
+        Start-Zapret -StrategyLine $bestStrategy.Line
+    } else {
+        Read-Host "  Enter..."
+    }
+
+    return [pscustomobject]@{
+        Method = if ($bestStrategy) { $bestStrategy.Method } else { "" }
+        Line   = if ($bestStrategy) { $bestStrategy.Line   } else { "" }
+        Score  = $bestScore
+        Total  = $TestDomains.Count
     }
 }

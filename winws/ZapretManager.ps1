@@ -12,6 +12,8 @@
 #    18-20 DNS/DoH/settings                -> Dns.ps1, DnsDoH.ps1
 #    21-24 провайдер (умный подбор)        -> Provider.ps1
 #    25-26 проверка и промоут              -> Verify.ps1
+#    27    проверка .bat                   -> CheckStrategy.ps1
+#    28    авто-подбор стратегии           -> Provider.ps1
 # ===============================================================
 
 # === ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ===
@@ -24,7 +26,7 @@
 . "$PSScriptRoot\modules\Launcher.ps1"
 . "$PSScriptRoot\modules\Provider.ps1"
 . "$PSScriptRoot\modules\Verify.ps1"
-. "$PSScriptRoot\modules\CheckStrategy.ps1" 
+. "$PSScriptRoot\modules\CheckStrategy.ps1"
 
 # === ЗАГРУЗКА НАСТРОЕК ===
 Load-Settings
@@ -117,6 +119,11 @@ function Show-Menu {
     Write-Host ""
     Write-Host "  ─── Готовые .bat ──────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host "  27. ПРОВЕРИТЬ СТРАТЕГИИ ИЗ .BAT (что открывают)" -ForegroundColor Yellow
+    Write-Host ""
+
+    # ─── 28: Авто-подбор ───
+    Write-Host "  ─── Авто-подбор ───────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  28. АВТО-ПОДБОР СТРАТЕГИИ (без blockcheck, в интернет)" -ForegroundColor Green
     Write-Host ""
 
     Write-Host "   0. Выход" -ForegroundColor DarkGray
@@ -223,7 +230,23 @@ while ($true) {
         # ─── 25-26: Проверка результатов ───
         "25" { Show-ResultsStats }
         "26" { Invoke-VerifyScan }
+
+        # ─── 27: Проверка .bat ───
         "27" { Show-CheckStrategyMenu }
+
+        # ─── 28: Авто-подбор стратегии ───
+        "28" {
+            $best = Invoke-AutoStrategyFind
+            if (-not $best) {
+                Write-Host ""
+                Write-Host "  Ничего не найдено." -ForegroundColor Yellow
+                Write-Host "  Рекомендации:" -ForegroundColor DarkYellow
+                Write-Host "    • Проверьте пути winws.exe и hostlist" -ForegroundColor Gray
+                Write-Host "    • Запустите пункт 8 (полный авто-тест) — он ищет тщательнее" -ForegroundColor Gray
+                Write-Host "    • Попробуйте сменить профиль провайдера вручную" -ForegroundColor Gray
+                Read-Host "  Enter..."
+            }
+        }
 
         "0"  { break }
         default { Write-Log "Неверный пункт" "ERR" }

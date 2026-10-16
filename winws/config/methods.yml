@@ -1,0 +1,184 @@
+# ═══════════════════════════════════════════════════════════════
+#  ZAPRET MANAGER — methods.yml
+# ═══════════════════════════════════════════════════════════════
+#  Полный список методов --dpi-desync для zapret v1 / winws.exe.
+#  Источник: официальная документация bol-van/zapret (docs/readme.md).
+# ═══════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════
+#  ОСНОВНЫЕ МЕТОДЫ --dpi-desync
+# ═══════════════════════════════════════════════════════════════
+Method_fake:            "fake"
+Method_fakeknown:       "fakeknown"
+Method_synack:          "synack"
+Method_rst:             "rst"
+Method_rstack:          "rstack"
+Method_hopbyhop:        "hopbyhop"
+Method_destopt:         "destopt"
+Method_ipfrag1:         "ipfrag1"
+Method_ipfrag2:         "ipfrag2"
+Method_multisplit:      "multisplit"
+Method_multidisorder:   "multidisorder"
+Method_fakedsplit:      "fakedsplit"
+Method_fakeddisorder:   "fakeddisorder"
+Method_udplen:          "udplen"
+Method_tamper:          "tamper"
+Method_syndata:         "syndata"
+Method_oob:             "oob"
+Method_hostfakesplit:   "hostfakesplit"
+
+# ─── Алиасы v1 ───
+Method_split:           "split"
+Method_split2:          "split2"
+Method_disorder:        "disorder"
+Method_disorder2:       "disorder2"
+
+# ─── Комбинированные ───
+Method_fake_split:      "fake,split"
+Method_fake_multisplit: "fake,multisplit"
+Method_fake_fakedsplit: "fake,fakedsplit"
+Method_syndata_fake_fakedsplit: "syndata,fake,fakedsplit"
+
+# ═══════════════════════════════════════════════════════════════
+#  ПОЗИЦИИ РАЗБИЕНИЯ --dpi-desync-split-pos
+# ═══════════════════════════════════════════════════════════════
+SplitPos_1:        "1"
+SplitPos_2:        "2"
+SplitPos_3:        "3"
+SplitPos_4:        "4"
+SplitPos_5:        "5"
+SplitPos_midsld:   "midsld"
+SplitPos_1_2:      "1+2"
+SplitPos_1_midsld: "1+midsld"
+SplitPos_2_midsld: "2+midsld"
+SplitPos_method:   "method"
+SplitPos_host:     "host"
+SplitPos_endhost:  "endhost"
+SplitPos_sld:      "sld"
+SplitPos_endsld:   "endsld"
+SplitPos_sniext:   "sniext"
+
+# ═══════════════════════════════════════════════════════════════
+#  FOOLING (обманки) --dpi-desync-fooling
+# ═══════════════════════════════════════════════════════════════
+Fooling_none:      "none"
+Fooling_ts:        "ts"
+Fooling_badseq:    "badseq"
+Fooling_badsum:    "badsum"
+Fooling_md5sig:    "md5sig"
+Fooling_hopbyhop:  "hopbyhop"
+Fooling_hopbyhop2: "hopbyhop2"
+Fooling_destopt:   "destopt"
+Fooling_datanoack: "datanoack"
+Fooling_ts_badseq: "ts,badseq"
+Fooling_ts_md5sig: "ts,md5sig"
+Fooling_badseq_md5sig: "badseq,md5sig"
+
+# ═══════════════════════════════════════════════════════════════
+#  AUTOTTL --dpi-desync-autottl
+# ═══════════════════════════════════════════════════════════════
+Autottl_0:  ""
+Autottl_1:  "1"
+Autottl_2:  "2"
+Autottl_3:  "3"
+Autottl_4:  "4"
+Autottl_5:  "5"
+Autottl_6:  "6"
+Autottl_8:  "8"
+Autottl_10: "10"
+Autottl_12: "12"
+Autottl_16: "16"
+Autottl_24: "24"
+Autottl_32: "32"
+
+# ═══════════════════════════════════════════════════════════════
+#  REPEATS --dpi-desync-repeats
+# ═══════════════════════════════════════════════════════════════
+Repeats_1:  "1"
+Repeats_2:  "2"
+Repeats_3:  "3"
+Repeats_4:  "4"
+Repeats_6:  "6"
+Repeats_8:  "8"
+Repeats_10: "10"
+Repeats_12: "12"
+
+# ═══════════════════════════════════════════════════════════════
+#  CUTOFF --dpi-desync-cutoff
+# ═══════════════════════════════════════════════════════════════
+Cutoff_n1:   "n1"
+Cutoff_n2:   "n2"
+Cutoff_n3:   "n3"
+Cutoff_n4:   "n4"
+Cutoff_n6:   "n6"
+Cutoff_n8:   "n8"
+Cutoff_n10:  "n10"
+Cutoff_d512:  "d512"
+Cutoff_d1024: "d1024"
+Cutoff_d2048: "d2048"
+
+# ═══════════════════════════════════════════════════════════════
+#  START --dpi-desync-start
+# ═══════════════════════════════════════════════════════════════
+Start_n1:   "n1"
+Start_n2:   "n2"
+Start_n4:   "n4"
+Start_d1:   "d1"
+Start_d2:   "d2"
+
+# ═══════════════════════════════════════════════════════════════
+#  SPLIT-SEQOVL
+# ═══════════════════════════════════════════════════════════════
+SplitSeqovl_681:  "681"
+SplitSeqovl_664:  "664"
+SplitSeqovl_568:  "568"
+SplitSeqovl_0:    "0"
+SplitSeqovlPattern_Google: "tls_clienthello_www_google_com.bin"
+SplitSeqovlPattern_4PDA:   "tls_clienthello_4pda_to.bin"
+SplitSeqovlPattern_STUN:   "stun2.bin"
+SplitSeqovlPattern_MaxRu:  "tls_clienthello_max_ru.bin"
+
+# ═══════════════════════════════════════════════════════════════
+#  HOSTFAKESPLIT
+# ═══════════════════════════════════════════════════════════════
+Hostfakesplit_Host_Google:  "host=www.google.com"
+Hostfakesplit_Host_Ya:      "host=ya.ru"
+Hostfakesplit_Host_Discord: "host=discord.com"
+Hostfakesplit_AltOrder:     "altorder=1"
+
+# ═══════════════════════════════════════════════════════════════
+#  FAKEDSPLIT PATTERNS
+# ═══════════════════════════════════════════════════════════════
+FakedsplitPattern_0x00: "0x00"
+FakedsplitPattern_0x16: "0x16"
+FakedsplitPattern_0x01: "0x01"
+
+# ═══════════════════════════════════════════════════════════════
+#  TCP FLAGS --dpi-desync-tcp-flags-set / --dpi-desync-tcp-flags-unset
+# ═══════════════════════════════════════════════════════════════
+TcpFlagsSet_SYN:   "SYN"
+TcpFlagsSet_RST:   "RST"
+TcpFlagsSet_ACK:   "ACK"
+TcpFlagsSet_PSH:   "PSH"
+TcpFlagsSet_FIN:   "FIN"
+TcpFlagsUnset_ACK: "ACK"
+TcpFlagsUnset_SYN: "SYN"
+TcpFlagsUnset_PSH: "PSH"
+
+# ═══════════════════════════════════════════════════════════════
+#  ANY-PROTOCOL --dpi-desync-any-protocol
+# ═══════════════════════════════════════════════════════════════
+AnyProtocol_0: "0"
+AnyProtocol_1: "1"
+
+# ═══════════════════════════════════════════════════════════════
+#  WINDIVERT ФИЛЬТРЫ
+# ═══════════════════════════════════════════════════════════════
+WfTcp:               "80,443"
+WfUdp:               "443,50000-65535,25565,19132"
+FilterL7:            ""
+WfIface:             "0"
+WfL3:                "ipv4"
+UseIpsetExclude:     "True"
+UseHostlistExclude:  "True"
+#Debug: "False"

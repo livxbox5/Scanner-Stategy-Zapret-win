@@ -15,13 +15,18 @@ LuaMethod_multisplit:     "multisplit"
 LuaMethod_multidisorder:  "multidisorder"
 LuaMethod_fakeddisorder:  "fakeddisorder"
 LuaMethod_hostfakesplit:  "hostfakesplit"
+LuaMethod_syndata:        "syndata"
+LuaMethod_rst:            "rst"
+LuaMethod_rstack:         "rstack"
+LuaMethod_tls_client_hello_clone: "tls_client_hello_clone"
+LuaMethod_http_hostcase:  "http_hostcase"
+LuaMethod_http_domcase:   "http_domcase"
 
 # --- Базовые операции ---
 # LuaMethod_pass:              "pass"
 # LuaMethod_drop:              "drop"
 # LuaMethod_send:              "send"
 # LuaMethod_pktmod:            "pktmod"
-# LuaMethod_rst:               "rst"
 # LuaMethod_rst_flood:         "rst_flood"
 
 # --- TCP-сегментация и фрагментация ---
@@ -29,7 +34,6 @@ LuaMethod_hostfakesplit:  "hostfakesplit"
 # LuaMethod_fakedsplit:        "fakedsplit"
 # LuaMethod_tcpseg:            "tcpseg"
 # LuaMethod_oob:               "oob"
-# LuaMethod_syndata:           "syndata"
 # LuaMethod_synack:            "synack"
 # LuaMethod_synack_split:      "synack_split"
 # LuaMethod_wsize:             "wsize"
@@ -38,13 +42,8 @@ LuaMethod_hostfakesplit:  "hostfakesplit"
 # LuaMethod_dht_dn:            "dht_dn"
 
 # --- HTTP-специфичные ---
-# LuaMethod_http_domcase:      "http_domcase"
-# LuaMethod_http_hostcase:     "http_hostcase"
 # LuaMethod_http_methodeol:    "http_methodeol"
 # LuaMethod_http_unixeol:      "http_unixeol"
-
-# --- Fake-инъекции ---
-# LuaMethod_tls_client_hello_clone: "tls_client_hello_clone"
 
 # --- Модификация протоколов / фрагментация ---
 # LuaMethod_ipfrag:            "ipfrag"
@@ -71,6 +70,12 @@ LuaBlobFile_quic_google:   "quic_initial_www_google_com.bin"
 LuaBlobFile_quic_rutube:   "quic_initial_rutube_ru.bin"
 LuaBlobFile_stun:          "stun.bin"
 
+# --- Новые blob-файлы (zapret2 v0.9.5) ---
+LuaBlobFile_tls_alert:     "tls_alert.bin"
+LuaBlobFile_dns:           "dns.bin"
+LuaBlobFile_sip_register:  "sip_register.bin"
+LuaBlobFile_dtls_serverhello: "dtls_serverhello.bin"
+
 # --- Раскомментируй нужные ---
 # LuaBlobFile_tls_4pda:    "tls_clienthello_4pda_to.bin"
 # LuaBlobFile_tls_5ka:     "tls_clienthello_5ka_ru.bin"
@@ -91,21 +96,22 @@ LuaBlobFile_stun:          "stun.bin"
 # ═══════════════════════════════════════════════════════════════
 
 # --- TTL ---
-# LuaFool_ip_ttl:           "ip_ttl=3"
-# LuaFool_ip_autottl:       "ip_autottl=3,1-10"
-# LuaFool_ip6_ttl:          "ip6_ttl=3"
+LuaFool_ip_ttl:           "ip_ttl=3"
+LuaFool_ip_autottl:       "ip_autottl=3,1-10"
+LuaFool_ip6_ttl:          "ip6_ttl=3"
 
-# --- TCP flags ---
-# LuaFool_tcp_md5:          "tcp_md5"
-# LuaFool_tcp_nop_del:      "tcp_nop_del"
-# LuaFool_tcp_ts_up:        "tcp_ts_up"
+# --- TCP параметры ---
+LuaFool_tcp_md5:          "tcp_md5"
+LuaFool_tcp_seq:          "tcp_seq=100000"
+LuaFool_tcp_ts:           "tcp_ts=-1000"
+LuaFool_tcp_ts_up:        "tcp_ts_up"
+LuaFool_tcp_nop_del:      "tcp_nop_del"
 
 # --- Reconstruct ---
-# LuaReconstruct_badsum:    "badsum"
+LuaFool_badsum:           "badsum"
 
 # --- Rawsend ---
-# LuaRawsend_repeats:       "repeats=3"
-# LuaRawsend_ifout:         "ifout=eth0"
+LuaFool_repeats:          "repeats=3"
 
 # ═══════════════════════════════════════════════════════════════
 #  ГЛОБАЛЬНЫЕ ОПЦИИ (Glob_*)
