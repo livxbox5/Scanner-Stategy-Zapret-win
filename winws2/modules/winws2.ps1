@@ -6,6 +6,7 @@
 #    Test-Winws2Ready             — проверка winws2.exe + dll + lua
 #    Get-Winws2LuaInit            — сборка --lua-init=@... (ОТНОСИТЕЛЬНЫЕ пути)
 #    Get-Winws2BlobDefs           — сборка --blob=имя:@bin/fake/... (ОТНОСИТЕЛЬНЫЕ)
+#    Get-Winws2FoolSuffix         — сборка fooling-суффикса (расширенный список)
 #    New-Winws2StrategyCandidates — генерация Lua-стратегий с ФОКУСОМ по провайдеру
 #                                   и per-strategy hostlist-exclude
 # ===============================================================
@@ -144,14 +145,34 @@ function Get-Winws2BlobDefs {
     return ($defs -join ' ')
 }
 
+# ============================================================================
+#  Fooling-суффикс — РАСШИРЕННЫЙ СПИСОК
+# ============================================================================
+#  Применяем ТОЛЬКО те параметры, что в $allowList.
+#  Добавлены tcp_ts, badsum, tcp_md5 (из документации zapret2).
+#  Остальные игнорируем, если они не разрешены явно.
+# ============================================================================
 function Get-Winws2FoolSuffix {
     param([string[]]$Exclude = @())
 
     if (-not $Global:ZapretState.LuaFool -or $Global:ZapretState.LuaFool.Count -eq 0) { return '' }
 
+    # Разрешённые fooling-параметры (расширено)
+    $allowList = @(
+        'ip_ttl',
+        'tcp_ts',
+        'badsum',
+        'tcp_md5',
+        'tcp_seq',
+        'tcp_ack',
+        'tcp_ts_up',
+        'datanoack'
+    )
+
     $parts = @()
     foreach ($name in $Global:ZapretState.LuaFool.Keys) {
-        if ($Exclude -contains $name) { continue }
+        if ($Exclude -contains $name)      { continue }
+        if ($allowList -notcontains $name) { continue }
         $val = [string]$Global:ZapretState.LuaFool[$name]
         if ($val) { $parts += $val }
     }
@@ -294,7 +315,6 @@ function New-Winws2StrategyCandidates {
     $acc = New-Object System.Collections.ArrayList
 
     # ─── 1. fake + multisplit (TCP/TLS) ───
-    #  --payload=tls_client_hello ДОЛЖЕН быть ПЕРЕД --lua-desync!
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
         foreach ($sp in $splits) {
@@ -323,14 +343,12 @@ function New-Winws2StrategyCandidates {
     }
 
     # ─── 3. hostfakesplit (TCP/TLS) ───
-    #  Новые параметры: midhost, altorder, disorder_after
     foreach ($hname in @('www.google.com','discord.com','www.youtube.com')) {
         $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=hostfakesplit`:host=$hname`:midhost=host-2`:altorder=1`:disorder_after$foolSuf"
         [void]$acc.Add([pscustomobject]@{ Method = "hostfakesplit(host=$hname,midhost=host-2,disorder_after)"; Line = $line })
     }
 
     # ─── 4. fakeddisorder (TCP/TLS) ───
-    #  Поддерживает tcp_md5, badsum, tcp_ts_up
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
         $spots = if ($focus) { @($splits | Select-Object -First 5) } else { @('1','2','midsld','host','sniext+1') }
@@ -341,7 +359,6 @@ function New-Winws2StrategyCandidates {
     }
 
     # ─── 5. fake + syndata (TCP/TLS) ───
-    #  syndata теперь принимает blob и комбинируется с multisplit
     foreach ($blobRaw in $tlsBlobs) {
         $blob = Get-SafeBlobName $blobRaw
         $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=syndata`:blob=$blob$foolSuf --lua-desync=multisplit`:pos=1,sld+1,endsld-2`:seqovl=1$foolSuf"
@@ -349,7 +366,6 @@ function New-Winws2StrategyCandidates {
     }
 
     # ─── 6. fake для QUIC (UDP) ───
-    #  payload=quic_initial
     foreach ($blobRaw in $quicBlobs) {
         $blob = Get-SafeBlobName $blobRaw
         $quicReps = if ($focus) { @($repeats | Select-Object -First 3) } else { @('repeats=2','repeats=4','repeats=6','repeats=8','repeats=11') }
@@ -360,7 +376,6 @@ function New-Winws2StrategyCandidates {
     }
 
     # ─── 7. fake для STUN (UDP) ───
-    #  payload=stun
     $stunBlobs = @($Global:ZapretState.LuaBlobFiles | Where-Object { $Global:ZapretState.LuaBlobFileMap[$_] -match 'stun' })
     foreach ($blobRaw in $stunBlobs) {
         $blob = Get-SafeBlobName $blobRaw
@@ -378,22 +393,59 @@ function New-Winws2StrategyCandidates {
         }
     }
 
-    # ─── 9. tls_client_hello_clone (НОВЫЙ МЕТОД) ───
-    #  Клонирует реальный TLS ClientHello для правдоподобного fake
+    # ─── 9. tls_client_hello_clone ───
     $cloneLine = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=tls_client_hello_clone:blob=cloned_tls:fallback=fake_default_tls --lua-desync=fake:blob=cloned_tls:optional:tcp_seq=10000000:tls_mod=rnd,dupsid,sni=fonts.google.com$foolSuf"
     [void]$acc.Add([pscustomobject]@{ Method = "tls_client_hello_clone+fake"; Line = $cloneLine })
 
-    # ─── 10. rst / rstack (НОВЫЙ МЕТОД) ───
-    #  Отправляет fake RST, чтобы DPI считал соединение закрытым
+    # ─── 10. rst / rstack ───
     $rstLine = "$globalPart --filter-tcp=443$hl$he --lua-desync=rst:rstack$foolSuf"
     [void]$acc.Add([pscustomobject]@{ Method = "rst:rstack"; Line = $rstLine })
 
-    # ─── 11. HTTP-методы (НОВЫЕ) ───
-    #  http_hostcase — изменение регистра в Host
-    #  http_domcase — чередование регистра в домене
+    # ─── 11. HTTP-методы (hostcase/domcase) ───
     $httpLine = "$globalPart --filter-tcp=80 --filter-l7=http$hl$he --payload=http_req --lua-desync=http_hostcase --lua-desync=http_domcase$foolSuf --lua-desync=multisplit`:pos=method,host$foolSuf"
     [void]$acc.Add([pscustomobject]@{ Method = "http_hostcase+http_domcase+multisplit"; Line = $httpLine })
 
+    # ─── 12. oob (TCP/TLS) — Urgent Pointer ───
+    foreach ($urp in @('1','2','4')) {
+        $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=oob`:urp=$urp$foolSuf"
+        [void]$acc.Add([pscustomobject]@{ Method = "oob(urp=$urp)"; Line = $line })
+    }
+
+    # ─── 13. fake + fakedsplit (TCP/TLS) ───
+    foreach ($blobRaw in $tlsBlobs) {
+        $blob = Get-SafeBlobName $blobRaw
+        $fdsSpots = if ($focus) { @($splits | Select-Object -First 4) } else { @('1','2','midsld','sniext+1','host') }
+        foreach ($sp in $fdsSpots) {
+            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=fake`:blob=$blob$foolSuf --lua-desync=fakedsplit`:pos=$sp$foolSuf"
+            [void]$acc.Add([pscustomobject]@{ Method = "fake(blob=$blobRaw)+fakedsplit($sp)"; Line = $line })
+        }
+    }
+
+    # ─── 14. tcpseg (TCP/TLS) ───
+    $tcpsegSpots = if ($focus) { @($splits | Select-Object -First 4) } else { @('1','2','midsld','host') }
+    foreach ($sp in $tcpsegSpots) {
+        foreach ($ovl in @('1','5','10')) {
+            $line = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=tcpseg`:seqovl=$ovl`:pos=$sp$foolSuf"
+            [void]$acc.Add([pscustomobject]@{ Method = "tcpseg(seqovl=$ovl,pos=$sp)"; Line = $line })
+        }
+    }
+
+    # ─── 15. HTTP EOL-методы ───
+    $httpEolLine = "$globalPart --filter-tcp=80 --filter-l7=http$hl$he --payload=http_req --lua-desync=http_methodeol --lua-desync=http_unixeol$foolSuf"
+    [void]$acc.Add([pscustomobject]@{ Method = "http_methodeol+http_unixeol"; Line = $httpEolLine })
+
+    $httpComboLine = "$globalPart --filter-tcp=80 --filter-l7=http$hl$he --payload=http_req --lua-desync=http_methodeol --lua-desync=http_unixeol --lua-desync=http_hostcase --lua-desync=http_domcase$foolSuf --lua-desync=multisplit`:pos=method,host$foolSuf"
+    [void]$acc.Add([pscustomobject]@{ Method = "http_methodeol+http_unixeol+hostcase+domcase+multisplit"; Line = $httpComboLine })
+
+    # ─── 16. hostfakesplit с новыми fooling ───
+    $hfLine = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=hostfakesplit`:host=rzd.ru`:midhost=host-2`:badsum`:tcp_ack=-66000`:tcp_ts_up$foolSuf"
+    [void]$acc.Add([pscustomobject]@{ Method = "hostfakesplit(rzd.ru,badsum,tcp_ack,tcp_ts_up)"; Line = $hfLine })
+
+    # ─── 17. multidisorder с tcp_ts ───
+    $mdLine = "$globalPart --filter-tcp=443 --filter-l7=tls$hl$he --payload=tls_client_hello --lua-desync=fake`:blob=fake_default_tls:tls_mod=rnd,dupsid,sni=www.google.com:tcp_ts=-1000 --lua-desync=multidisorder`:pos=1,midsld,sniext+1,endhost-2,-10`:seqovl=1$foolSuf"
+    [void]$acc.Add([pscustomobject]@{ Method = "fake(tcp_ts=-1000)+multidisorder"; Line = $mdLine })
+
+    # ─── Итог ───
     $totalGenerated = $acc.Count
     $randomCount = 0
     $rawRc = $Global:ZapretState.RandomCount

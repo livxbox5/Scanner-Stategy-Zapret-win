@@ -8,6 +8,7 @@
 #  Авто-подбор стратегии: пункт 28 в ZapretManager.ps1.
 #
 #  Актуально для zapret v1 (bol-van/zapret).
+#  Добавлены IpId и расширенные Foolings (tcp_ts_up, datanoack).
 # ===============================================================
 
 $script:ProviderPresets = @{
@@ -18,12 +19,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit','syndata'
         )
         SplitPos  = @('midsld','1','2','4')
-        Foolings  = @('badseq','ts','badsum','md5sig','datanoack')
+        Foolings  = @('badseq','ts','badsum','md5sig','datanoack','tcp_ts_up')
         Autottls  = @('','2','4','8')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Ростелеком: fake + split2 с badseq; проверяем fakedsplit, hostfakesplit, syndata'
+        Note      = 'Ростелеком: fake + split2 с badseq; добавлен tcp_ts_up и IpId=seq'
     }
     'MTS' = @{
         Patterns  = @('MTS','МТС','Mobile TeleSystems','MTS PJSC')
@@ -32,12 +34,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1','4')
-        Foolings  = @('ts','badseq','badsum','datanoack')
+        Foolings  = @('ts','badseq','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4','8')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'МТС: split2 и multidisorder с ts'
+        Note      = 'МТС: split2 и multidisorder с ts; добавлен tcp_ts_up и IpId=seq'
     }
     'Beeline' = @{
         Patterns  = @('Beeline','Билайн','VimpelCom','Vimpel-Communications')
@@ -46,12 +49,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('md5sig','ts','badseq','datanoack')
+        Foolings  = @('md5sig','ts','badseq','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('rnd')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Билайн: multidisorder с md5sig'
+        Note      = 'Билайн: multidisorder с md5sig; добавлен tcp_ts_up и IpId=rnd'
     }
     'Megafon' = @{
         Patterns  = @('Megafon','Мегафон','MegaFon','MegaFon PJSC')
@@ -60,12 +64,13 @@ $script:ProviderPresets = @{
             'hostfakesplit','syndata'
         )
         SplitPos  = @('1','midsld','2','4')
-        Foolings  = @('badseq','ts','badsum','datanoack')
+        Foolings  = @('badseq','ts','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','4','8','2')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Мегафон: fakedsplit с badseq и autottl=4'
+        Note      = 'Мегафон: fakedsplit с badseq и autottl=4; добавлен tcp_ts_up и IpId=seq'
     }
     'ER-Telecom' = @{
         Patterns  = @('ER-Telecom','Дом\.ру','DOM\.RU','ER-Telecom Holding')
@@ -74,12 +79,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badsum','badseq','ts','datanoack')
+        Foolings  = @('badsum','badseq','ts','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Дом.ру: split2 и disorder2'
+        Note      = 'Дом.ру: split2 и disorder2; добавлен tcp_ts_up и IpId=seq'
     }
     'TTK' = @{
         Patterns  = @('TTK','ТТК','TransTeleCom','TransTelecom')
@@ -88,12 +94,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','4')
-        Foolings  = @('badseq','ts','badsum','datanoack')
+        Foolings  = @('badseq','ts','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'ТТК: disorder2 и split2'
+        Note      = 'ТТК: disorder2 и split2; добавлен tcp_ts_up и IpId=seq'
     }
     'MGTS' = @{
         Patterns  = @('MGTS','МГТС','Moscow City Telephone')
@@ -102,12 +109,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('1','midsld','2')
-        Foolings  = @('ts','badseq','badsum','datanoack')
+        Foolings  = @('ts','badseq','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('rnd')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'МГТС: split2 и disorder2'
+        Note      = 'МГТС: split2 и disorder2; добавлен tcp_ts_up и IpId=rnd'
     }
     'Tele2' = @{
         Patterns  = @('Tele2','Теле2','Tele2 Russia')
@@ -116,12 +124,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1')
-        Foolings  = @('ts','badseq','badsum','datanoack')
+        Foolings  = @('ts','badseq','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Tele2: multisplit'
+        Note      = 'Tele2: multisplit; добавлен tcp_ts_up и IpId=seq'
     }
     'Yota' = @{
         Patterns  = @('Yota','Йота','Scartel')
@@ -130,12 +139,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badseq','ts','badsum','datanoack')
+        Foolings  = @('badseq','ts','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Yota: split2 с badseq'
+        Note      = 'Yota: split2 с badseq; добавлен tcp_ts_up и IpId=seq'
     }
     'Tattelecom' = @{
         Patterns  = @('Tattelecom','Таттелеком')
@@ -144,12 +154,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('midsld','2','4')
-        Foolings  = @('badseq','ts','md5sig','datanoack')
+        Foolings  = @('badseq','ts','md5sig','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('rnd')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Таттелеком: split2 и disorder2'
+        Note      = 'Таттелеком: split2 и disorder2; добавлен tcp_ts_up и IpId=rnd'
     }
     'Ufanet' = @{
         Patterns  = @('Ufanet','Уфанет')
@@ -158,12 +169,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit'
         )
         SplitPos  = @('2','midsld','1')
-        Foolings  = @('badseq','ts','badsum','datanoack')
+        Foolings  = @('badseq','ts','badsum','datanoack','tcp_ts_up')
         Autottls  = @('','2','4')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Уфанет: split2 и multisplit'
+        Note      = 'Уфанет: split2 и multisplit; добавлен tcp_ts_up и IpId=seq'
     }
     'default' = @{
         Patterns  = @()
@@ -172,12 +184,13 @@ $script:ProviderPresets = @{
             'fakedsplit','hostfakesplit','syndata'
         )
         SplitPos  = @('1','2','4','midsld')
-        Foolings  = @('ts','badseq','badsum','md5sig','datanoack')
+        Foolings  = @('ts','badseq','badsum','md5sig','datanoack','tcp_ts_up')
         Autottls  = @('','2','4','8')
+        IpId      = @('seq')
         TcpFlagsSet   = @()
         TcpFlagsUnset = @()
         AnyProto      = 0
-        Note      = 'Универсальный набор для zapret1'
+        Note      = 'Универсальный набор для zapret1; добавлен tcp_ts_up и IpId=seq'
     }
 }
 
@@ -270,11 +283,19 @@ function Apply-ProviderPreset {
     $Global:ZapretState.TcpFlagsUnset  = @($preset.TcpFlagsUnset)
     $Global:ZapretState.AnyProtocol    = $preset.AnyProto
 
+    # ─── Новые поля ───
+    if ($preset.ContainsKey('IpId')) {
+        $Global:ZapretState.IpId = @($preset.IpId)
+    } else {
+        $Global:ZapretState.IpId = @('seq')
+    }
+
     Write-Host ("  Применён preset '{0}' (zapret1)" -f $ProfileName) -ForegroundColor Gray
     Write-Host ("    Methods  : {0}" -f ($preset.Methods  -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    SplitPos : {0}" -f ($preset.SplitPos -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    Foolings : {0}" -f ($preset.Foolings -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    Autottls : {0}" -f ($preset.Autottls -join ', ')) -ForegroundColor DarkGray
+    Write-Host ("    IpId     : {0}" -f ($Global:ZapretState.IpId -join ', ')) -ForegroundColor DarkGray
     Write-Host ("    Note     : {0}" -f $preset.Note) -ForegroundColor DarkYellow
 }
 

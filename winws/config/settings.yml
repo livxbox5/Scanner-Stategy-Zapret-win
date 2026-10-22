@@ -2,7 +2,8 @@
 #  ZAPRET MANAGER — settings.yml
 # ═══════════════════════════════════════════════════════════════
 #  Только zapret v1 (winws.exe).
-#  Актуально для последней версии ветки v1 (EOL).
+#  Сверено с bol-van/zapret v72.3.
+#  ⚠️  Все новые параметры v72+ опциональны — можно оставить пустыми.
 # ═══════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════
@@ -112,3 +113,179 @@ Doh_Quad9:       "https://dns.quad9.net/dns-query"
 Doh_OpenDNS:     "https://doh.opendns.com/dns-query"
 Doh_Yandex:      "https://dns.yandex.ru/dns-query"
 Doh_Xbox:        "https://xbox-dns.ru/dns-query"
+
+# ═══════════════════════════════════════════════════════════════
+#  НОВЫЕ ПАРАМЕТРЫ v72+ (опциональны)
+# ═══════════════════════════════════════════════════════════════
+
+# ─── --wf-raw-part (v72+) ───
+WfRawPart: ""
+
+# ─── --ip-id (v72.1+) ───
+IpId_seq:      "seq"
+IpId_seqgroup: "seqgroup"   # ⚠️ устаревшая схема, может ломать googlevideo
+IpId_rnd:      "rnd"
+IpId_zero:     "zero"
+
+# ─── --orig-tcp-flags-set / --orig-tcp-flags-unset (v72.2+) ───
+OrigTcpFlagsSet_default:   ""
+OrigTcpFlagsUnset_default: ""
+
+# ─── --dup-tcp-flags-set / --dup-tcp-flags-unset (v72.2+) ───
+DupTcpFlagsSet_default:    ""
+DupTcpFlagsUnset_default:  ""
+
+# ─── --dpi-desync-tcp-flags-set / --dpi-desync-tcp-flags-unset ───
+TcpFlagsSet_default:   ""
+TcpFlagsUnset_default: ""
+
+# ─── --dpi-desync-any-protocol / --dpi-desync-start ───
+AnyProtocol: "0"
+Start_default: ""
+
+# ─── --wssize-forced-cutoff=0 (v72.2+) ───
+WssizeForcedCutoff: ""
+
+# ═══════════════════════════════════════════════════════════════
+#  МЕТОДЫ DPI-DESYNC (используются New-StrategyCandidates)
+# ═══════════════════════════════════════════════════════════════
+Method_fake:            "fake"
+Method_fakeknown:       "fakeknown"
+Method_synack:          "synack"
+Method_rst:             "rst"
+Method_hopbyhop:        "hopbyhop"
+Method_destopt:         "destopt"
+Method_ipfrag1:         "ipfrag1"
+Method_ipfrag2:         "ipfrag2"
+Method_multisplit:      "multisplit"
+Method_multidisorder:   "multidisorder"
+Method_fakedsplit:      "fakedsplit"
+Method_fakeddisorder:   "fakeddisorder"
+Method_udplen:          "udplen"
+Method_tamper:          "tamper"
+Method_syndata:         "syndata"
+Method_oob:             "oob"
+Method_hostfakesplit:   "hostfakesplit"
+Method_split:           "split"
+Method_split2:          "split2"
+Method_disorder:        "disorder"
+Method_disorder2:       "disorder2"
+
+# ═══════════════════════════════════════════════════════════════
+#  SPLIT POSITIONS
+# ═══════════════════════════════════════════════════════════════
+SplitPos_1:        "1"
+SplitPos_2:        "2"
+SplitPos_3:        "3"
+SplitPos_4:        "4"
+SplitPos_5:        "5"
+SplitPos_midsld:   "midsld"
+SplitPos_1_2:      "1+2"
+SplitPos_1_midsld: "1+midsld"
+SplitPos_2_midsld: "2+midsld"
+SplitPos_method:   "method"
+SplitPos_host:     "host"
+SplitPos_endhost:  "endhost"
+SplitPos_sld:      "sld"
+SplitPos_endsld:   "endsld"
+SplitPos_sniext:   "sniext"
+
+# ═══════════════════════════════════════════════════════════════
+#  FOOLING
+# ═══════════════════════════════════════════════════════════════
+Fooling_none:          "none"
+Fooling_ts:            "ts"
+Fooling_badseq:        "badseq"
+Fooling_badsum:        "badsum"
+Fooling_md5sig:        "md5sig"
+Fooling_hopbyhop:      "hopbyhop"
+Fooling_hopbyhop2:     "hopbyhop2"
+Fooling_destopt:       "destopt"
+Fooling_datanoack:     "datanoack"
+Fooling_ts_badseq:     "ts,badseq"
+Fooling_ts_md5sig:     "ts,md5sig"
+Fooling_badseq_md5sig: "badseq,md5sig"
+Fooling_tcp_ts_up:     "tcp_ts_up"
+Fooling_tls13:         "tls13"
+Fooling_ts_tls13:      "ts,tls13"
+Fooling_badseq_tls13:  "badseq,tls13"
+
+# ═══════════════════════════════════════════════════════════════
+#  AUTOTTL
+# ═══════════════════════════════════════════════════════════════
+Autottl_0:  ""
+Autottl_1:  "1"
+Autottl_2:  "2"
+Autottl_3:  "3"
+Autottl_4:  "4"
+Autottl_5:  "5"
+Autottl_6:  "6"
+Autottl_8:  "8"
+Autottl_10: "10"
+Autottl_12: "12"
+Autottl_16: "16"
+Autottl_24: "24"
+Autottl_32: "32"
+
+# ═══════════════════════════════════════════════════════════════
+#  REPEATS
+# ═══════════════════════════════════════════════════════════════
+Repeats_1:  "1"
+Repeats_2:  "2"
+Repeats_3:  "3"
+Repeats_4:  "4"
+Repeats_6:  "6"
+Repeats_8:  "8"
+Repeats_10: "10"
+Repeats_12: "12"
+
+# ═══════════════════════════════════════════════════════════════
+#  CUTOFF
+# ═══════════════════════════════════════════════════════════════
+Cutoff_n1:    "n1"
+Cutoff_n2:    "n2"
+Cutoff_n3:    "n3"
+Cutoff_n4:    "n4"
+Cutoff_n6:    "n6"
+Cutoff_n8:    "n8"
+Cutoff_n10:   "n10"
+Cutoff_d512:  "d512"
+Cutoff_d1024: "d1024"
+Cutoff_d2048: "d2048"
+
+# ═══════════════════════════════════════════════════════════════
+#  SPLIT-SEQOVL / FAKEDSPLIT PATTERN
+# ═══════════════════════════════════════════════════════════════
+SplitSeqovl_681:  "681"
+SplitSeqovl_664:  "664"
+SplitSeqovl_568:  "568"
+SplitSeqovl_0:    "0"
+SplitSeqovlPattern_Google: "tls_clienthello_www_google_com.bin"
+SplitSeqovlPattern_4PDA:   "tls_clienthello_4pda_to.bin"
+SplitSeqovlPattern_STUN:   "stun2.bin"
+SplitSeqovlPattern_MaxRu:  "tls_clienthello_max_ru.bin"
+
+FakedsplitPattern_0x00: "0x00"
+FakedsplitPattern_0x16: "0x16"
+FakedsplitPattern_0x01: "0x01"
+
+# ═══════════════════════════════════════════════════════════════
+#  HOSTFAKESPLIT
+# ═══════════════════════════════════════════════════════════════
+Hostfakesplit_Host_Google:  "host=www.google.com"
+Hostfakesplit_Host_Ya:      "host=ya.ru"
+Hostfakesplit_Host_Discord: "host=discord.com"
+Hostfakesplit_AltOrder_0:   "altorder=0"
+Hostfakesplit_AltOrder_1:   "altorder=1"
+
+# ═══════════════════════════════════════════════════════════════
+#  WINDIVERT ФИЛЬТРЫ
+# ═══════════════════════════════════════════════════════════════
+WfTcp:               "80,443"
+WfUdp:               "443,50000-65535,25565,19132"
+FilterL7:            ""
+WfIface:             "0"
+WfL3:                "ipv4"
+UseIpsetExclude:     "True"
+UseHostlistExclude:  "True"
+#Debug: "False"

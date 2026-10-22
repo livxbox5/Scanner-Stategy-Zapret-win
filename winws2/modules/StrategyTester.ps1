@@ -340,6 +340,7 @@ function Get-DomainsFromHostlist {
             if ($list -contains $f.FullName) { continue }
             if ($f.Name -in $excludeNames)  { continue }
             if ($f.Name -match '(?i)^list-exclude') { continue }
+            if ($f.Name -match '(?i)^ipset-')       { continue }   # ← IPSet — это не домены
             $list.Add($f.FullName)
         }
 

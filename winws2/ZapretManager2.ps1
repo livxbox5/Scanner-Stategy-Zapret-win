@@ -8,7 +8,7 @@
 #    1-5   пути                        -> Settings.ps1
 #    6-9   поиск файлов                -> FileScanner.ps1
 #    10-14 стратегии                   -> StrategyTester.ps1
-#    15-19 диагноскеа5тика                 -> StrategyTester.ps1
+#    15-19 диагностика                 -> StrategyTester.ps1
 #    20-22 DNS/DoH/settings            -> Dns.ps1, DnsDoH.ps1
 #    23-26 провайдер                   -> Provider.ps1
 #    27-28 проверка результатов        -> Verify.ps1
@@ -16,7 +16,18 @@
 #    30-31 composer/toBat              -> ResultComposer.ps1, ResultToBat.ps1
 #    32    готовые команды             -> Provider.ps1
 #    33    АВТО-ПОДБОР СТРАТЕГИИ        -> Provider.ps1 (Invoke-AutoStrategyFind)
+#    34    WEB-INTEL                   -> WebIntel.ps1
+#    35    Verbose HTTP                -> toggle $VerbosePreference
 # ===============================================================
+
+# ─── Глобальные настройки verbose ───────────────────────────────
+#  Раскомментируй строку ниже, чтобы ВСЕ HTTP-запросы (WebIntel,
+#  DNS, DoH, ip-api) логировались через Write-Verbose.
+#
+# $VerbosePreference = 'Continue'
+
+# Переключатель для menu item 35 (по умолчанию — выключен)
+$Global:VerboseMode = $false
 
 # === ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ===
 . "$PSScriptRoot\modules\Core.ps1"
@@ -32,6 +43,7 @@
 . "$PSScriptRoot\modules\PortScanner.ps1"
 . "$PSScriptRoot\modules\ResultComposer.ps1"
 . "$PSScriptRoot\modules\ResultToBat.ps1"
+. "$PSScriptRoot\modules\WebIntel.ps1"
 
 # === ЗАГРУЗКА НАСТРОЕК ===
 Import-Settings
@@ -51,6 +63,26 @@ if (-not (Test-Admin)) {
     Write-Host "!! Запущено без прав администратора. winws2 не сможет стартовать." -ForegroundColor Yellow
     Write-Host "   Рекомендуется: правый клик → 'Запуск от имени администратора'." -ForegroundColor Yellow
     Read-Host "`nНажмите Enter для продолжения..."
+}
+
+# ===============================================================
+# === TOGGLE VERBOSE ===
+# ===============================================================
+function Set-VerboseMode {
+    param([bool]$Enabled)
+
+    $Global:VerboseMode = $Enabled
+    if ($Enabled) {
+        $Global:VerbosePreference = 'Continue'
+        # Также ставим в текущий scope — иначе функции, вызванные из этого scope,
+        # не увидят глобальный preference (PS 5.1 читает ближайшую область видимости).
+        $VerbosePreference = 'Continue'
+        Write-Host "  Verbose ВКЛЮЧЁН — все Write-Verbose будут печататься." -ForegroundColor Green
+    } else {
+        $Global:VerbosePreference = 'SilentlyContinue'
+        $VerbosePreference = 'SilentlyContinue'
+        Write-Host "  Verbose ВЫКЛЮЧЕН." -ForegroundColor DarkGray
+    }
 }
 
 # ===============================================================
@@ -74,6 +106,7 @@ function Show-Menu {
     Write-Host ("    MaxDomains  : {0}" -f $(if ($Global:ZapretState.MaxDomains -eq 0) { "без лимита" } else { $Global:ZapretState.MaxDomains }))
     Write-Host ("    Lua ready   : {0}" -f $(if ($Global:ZapretState.LuaReady) { "ДА" } else { "НЕТ" })) -ForegroundColor $(if ($Global:ZapretState.LuaReady) { "Green" } else { "Red" })
     Write-Host ("    Provider    : {0}" -f $(if ($Global:ZapretState.ProviderProfile) { $Global:ZapretState.ProviderProfile } else { "<авто>" })) -ForegroundColor $(if ($Global:ZapretState.ProviderProfile) { "Cyan" } else { "DarkGray" })
+    Write-Host ("    Verbose     : {0}" -f $(if ($Global:VerboseMode) { "ВКЛ" } else { "выкл" })) -ForegroundColor $(if ($Global:VerboseMode) { "Yellow" } else { "DarkGray" })
     Show-ZapretStatus
     Write-Host ""
 
@@ -152,6 +185,16 @@ function Show-Menu {
     # ─── 33: Авто-подбор ───
     Write-Host "  ─── Авто-подбор ───────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host "  33. АВТО-ПОДБОР СТРАТЕГИИ (без blockcheck, в интернет)" -ForegroundColor Green
+    Write-Host ""
+
+    # ─── 34: Web-Intel ───
+    Write-Host "  ─── Поиск в интернете ────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  34. WEB-INTEL (GitHub + ntc.party + DDG)" -ForegroundColor Cyan
+    Write-Host ""
+
+    # ─── 35: Verbose ───
+    Write-Host "  ─── Отладка ──────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  35. Toggle VERBOSE (логирование HTTP-запросов)" -ForegroundColor Yellow
     Write-Host ""
 
     Write-Host "   0. Выход" -ForegroundColor DarkGray
@@ -284,8 +327,25 @@ while ($true) {
             }
         }
 
-        # ─── 0: Выход // Exit ───
+        # ─── 34: Web-Intel ───
+        "34" {
+            # На время работы WebIntel включаем verbose (если включён глобально)
+            $prevVerbose = $VerbosePreference
+            if ($Global:VerboseMode) { $VerbosePreference = 'Continue' }
+            Show-WebIntelMenu
+            $VerbosePreference = $prevVerbose
+        }
+
+        # ─── 35: Toggle Verbose ───
+        "35" {
+            Set-VerboseMode -Enabled (-not $Global:VerboseMode)
+            Write-Host ""
+            Read-Host "  Нажмите Enter для продолжения"
+        }
+
+        # ─── 0: Выход ───
         "0"  { break }
+
         default { Write-Log "Неверный пункт" "ERR" }
     }
 

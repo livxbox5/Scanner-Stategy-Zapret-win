@@ -8,6 +8,11 @@
 #   - Save-Settings НЕ перезаписывает settings.yml целиком.
 #   - Пути в settings.yml можно указывать ПАПКАМИ — скрипт сам
 #     найдёт нужный файл внутри (winws2.exe, zapret-lib.lua, ...).
+#   - settings.yml имеет ПРИОРИТЕТ над methods.yml. Если ключ есть
+#     в settings.yml — значение из methods.yml НЕ применяется.
+#
+#  Обновлено для zapret2 v0.9.5+:
+#    - Добавлены DisableChecksumOffload, WfIface, WfL3, NoStickyPayload
 # ===============================================================
 
 $configPath = Join-Path $PSScriptRoot '..\config\settings.yml'
@@ -84,6 +89,12 @@ $Global:ZapretState = @{
     Strategies        = @()
     Running           = $false
     LuaReady          = $false
+
+    # ─── Новые глобальные параметры zapret2 ───
+    DisableChecksumOffload = $false
+    WfIface                = ""
+    WfL3                   = "any"
+    NoStickyPayload        = $false
 }
 
 function Test-Admin {
@@ -352,14 +363,24 @@ function Import-Settings {
         return
     }
 
-    # ─── methods.yml ───
+    # ─── methods.yml — только ДОБАВЛЯЕТ отсутствующие ключи ───
     $methodsFile = Join-Path (Split-Path $file -Parent) 'methods.yml'
     if (Test-Path $methodsFile) {
         try {
             $mRaw = [System.IO.File]::ReadAllText($methodsFile, [System.Text.Encoding]::UTF8)
             $mData = ConvertFrom-SimpleYaml $mRaw
-            foreach ($k in $mData.Keys) { $data[$k] = $mData[$k] }
-            Write-Host ("  methods.yml: {0} ключей" -f $mData.Keys.Count) -ForegroundColor DarkCyan
+            $addedCount = 0
+            $skippedCount = 0
+            foreach ($k in $mData.Keys) {
+                if ($data.ContainsKey($k)) {
+                    $skippedCount++
+                } else {
+                    $data[$k] = $mData[$k]
+                    $addedCount++
+                }
+            }
+            Write-Host ("  methods.yml: добавлено={0}, переопределено settings.yml={1}" -f `
+                $addedCount, $skippedCount) -ForegroundColor DarkCyan
         } catch {
             Write-Host ("  [!] Ошибка чтения methods.yml: {0}" -f $_) -ForegroundColor Red
         }
@@ -428,6 +449,16 @@ function Import-Settings {
     # ─── Провайдер ───
     $v = Get-YamlValue $data 'ProviderProfile'; if ($v) { $Global:ZapretState.ProviderProfile = [string]$v }
 
+    # ─── Новые глобальные параметры zapret2 ───
+    $v = Get-YamlValue $data 'DisableChecksumOffload'
+    if ($null -ne $v) { $Global:ZapretState.DisableChecksumOffload = ConvertTo-Bool $v $false }
+    $v = Get-YamlValue $data 'WfIface'
+    if ($v) { $Global:ZapretState.WfIface = [string]$v }
+    $v = Get-YamlValue $data 'WfL3'
+    if ($v) { $Global:ZapretState.WfL3 = [string]$v }
+    $v = Get-YamlValue $data 'NoStickyPayload'
+    if ($null -ne $v) { $Global:ZapretState.NoStickyPayload = ConvertTo-Bool $v $false }
+
     # ─── Lua-методы ───
     $Global:ZapretState.LuaMethods = @()
     foreach ($k in $data.Keys) {
@@ -472,7 +503,7 @@ function Import-Settings {
         Write-Host "  [auto] BinPath не задан или не существует" -ForegroundColor DarkYellow
     }
 
-    # ─── Fooling (включая НОВЫЕ параметры) ───
+    # ─── Fooling ───
     $Global:ZapretState.LuaFool = @{}
     foreach ($k in $data.Keys) {
         if ($k -match '^LuaFool_([A-Za-z0-9_]+)$') {
@@ -482,7 +513,6 @@ function Import-Settings {
         }
     }
 
-    # ─── Заполняем Fooling из LuaFool (обратная совместимость) ───
     foreach ($key in @('ip_ttl','tcp_seq','tcp_ts','tcp_md5','tcp_flags_set','tcp_ts_up','badsum','repeats')) {
         if ($Global:ZapretState.LuaFool.ContainsKey($key)) {
             $Global:ZapretState.Fooling[$key] = $Global:ZapretState.LuaFool[$key]
@@ -555,10 +585,24 @@ function Import-Settings {
     Write-Host ("  .bin-файлы ({0})" -f $Global:ZapretState.LuaBlobFiles.Count) -ForegroundColor DarkCyan
     Write-Host ("  DNS={0}  DoH={1}" -f $Global:ZapretState.DnsServers.Count, $Global:ZapretState.DohServers.Count) -ForegroundColor Gray
     Write-Host ("  ProviderProfile={0}" -f $Global:ZapretState.ProviderProfile) -ForegroundColor DarkCyan
-    Write-Host ("  Fooling: ip_ttl={0} tcp_md5={1} badsum={2}" -f `
-        $Global:ZapretState.Fooling['ip_ttl'],
-        $Global:ZapretState.Fooling['tcp_md5'],
-        $Global:ZapretState.Fooling['badsum']) -ForegroundColor DarkCyan
+
+    # ─── Новые глобальные параметры (отчёт) ───
+    Write-Host ("  DisableChecksumOffload={0}  WfIface='{1}'  WfL3='{2}'  NoStickyPayload={3}" -f `
+        $Global:ZapretState.DisableChecksumOffload, `
+        $Global:ZapretState.WfIface, `
+        $Global:ZapretState.WfL3, `
+        $Global:ZapretState.NoStickyPayload) -ForegroundColor DarkCyan
+
+    # Отчёт по активным fooling
+    $activeFool = @()
+    foreach ($k in $Global:ZapretState.LuaFool.Keys) {
+        $activeFool += ("{0}={1}" -f $k, $Global:ZapretState.LuaFool[$k])
+    }
+    if ($activeFool.Count -gt 0) {
+        Write-Host ("  Fooling AKTIV ({0}): {1}" -f $activeFool.Count, ($activeFool -join ', ')) -ForegroundColor Yellow
+    } else {
+        Write-Host "  Fooling: не задан" -ForegroundColor DarkGray
+    }
     Write-Host "  ────────────────────────────────────────────" -ForegroundColor DarkMagenta
     Write-Host ""
 }
@@ -619,6 +663,12 @@ function Save-Settings {
     Set-YamlValue -File $file -Key 'Hostlist'          -Value $Global:ZapretState.Hostlist
     Set-YamlValue -File $file -Key 'HostlistExclude'   -Value $Global:ZapretState.HostlistExclude
     Set-YamlValue -File $file -Key 'ProviderProfile'   -Value $Global:ZapretState.ProviderProfile
+
+    # ─── Новые глобальные параметры zapret2 ───
+    Set-YamlValue -File $file -Key 'DisableChecksumOffload' -Value ([string]$Global:ZapretState.DisableChecksumOffload)
+    Set-YamlValue -File $file -Key 'WfIface'                -Value $Global:ZapretState.WfIface
+    Set-YamlValue -File $file -Key 'WfL3'                   -Value $Global:ZapretState.WfL3
+    Set-YamlValue -File $file -Key 'NoStickyPayload'        -Value ([string]$Global:ZapretState.NoStickyPayload)
 
     # ─── Lua-методы ───
     $methodLines = @()

@@ -2,17 +2,18 @@
 #  ZAPRET MANAGER — methods.yml
 # ═══════════════════════════════════════════════════════════════
 #  Полный список методов --dpi-desync для zapret v1 / winws.exe.
-#  Источник: официальная документация bol-van/zapret (docs/readme.md).
+#  Сверено с bol-van/zapret v72.3 (актуальная ветка v1).
+#  ⚠️  Удалён устаревший rstack. Добавлены параметры v72.1 / v72.2.
 # ═══════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════
-#  ОСНОВНЫЕ МЕТОДЫ --dpi-desync
+#  ОСНОВНЫЕ МЕТОДЫ --dpi-desync (актуальные)
 # ═══════════════════════════════════════════════════════════════
 Method_fake:            "fake"
 Method_fakeknown:       "fakeknown"
 Method_synack:          "synack"
 Method_rst:             "rst"
-Method_rstack:          "rstack"
+# Method_rstack:        "rstack"          # ❌ УДАЛЁН: не документирован как отдельный метод
 Method_hopbyhop:        "hopbyhop"
 Method_destopt:         "destopt"
 Method_ipfrag1:         "ipfrag1"
@@ -20,12 +21,12 @@ Method_ipfrag2:         "ipfrag2"
 Method_multisplit:      "multisplit"
 Method_multidisorder:   "multidisorder"
 Method_fakedsplit:      "fakedsplit"
-Method_fakeddisorder:   "fakeddisorder"
+Method_fakeddisorder:   "fakeddisorder"   # ✅ ДОБАВЛЕН (встречается в сборках v72+)
 Method_udplen:          "udplen"
 Method_tamper:          "tamper"
-Method_syndata:         "syndata"
+Method_syndata:         "syndata"         # ✅ ДОБАВЛЕН
 Method_oob:             "oob"
-Method_hostfakesplit:   "hostfakesplit"
+Method_hostfakesplit:   "hostfakesplit"   # ✅ ДОБАВЛЕН (v72+)
 
 # ─── Алиасы v1 ───
 Method_split:           "split"
@@ -33,11 +34,18 @@ Method_split2:          "split2"
 Method_disorder:        "disorder"
 Method_disorder2:       "disorder2"
 
-# ─── Комбинированные ───
-Method_fake_split:      "fake,split"
-Method_fake_multisplit: "fake,multisplit"
-Method_fake_fakedsplit: "fake,fakedsplit"
+# ─── Комбинированные (актуальные) ───
+Method_fake_split:              "fake,split"
+Method_fake_split2:             "fake,split2"
+Method_fake_disorder:           "fake,disorder"
+Method_fake_disorder2:          "fake,disorder2"
+Method_fake_multisplit:         "fake,multisplit"
+Method_fake_multidisorder:      "fake,multidisorder"
+Method_fake_fakedsplit:         "fake,fakedsplit"
+Method_fake_hostfakesplit:      "fake,hostfakesplit"
 Method_syndata_fake_fakedsplit: "syndata,fake,fakedsplit"
+Method_syndata_fake_multisplit: "syndata,fake,multisplit"
+Method_fakedsplit_syndata:      "fakedsplit,syndata"
 
 # ═══════════════════════════════════════════════════════════════
 #  ПОЗИЦИИ РАЗБИЕНИЯ --dpi-desync-split-pos
@@ -49,8 +57,11 @@ SplitPos_4:        "4"
 SplitPos_5:        "5"
 SplitPos_midsld:   "midsld"
 SplitPos_1_2:      "1+2"
+SplitPos_1_3:      "1+3"
+SplitPos_1_4:      "1+4"
 SplitPos_1_midsld: "1+midsld"
 SplitPos_2_midsld: "2+midsld"
+SplitPos_2_4:      "2+4"
 SplitPos_method:   "method"
 SplitPos_host:     "host"
 SplitPos_endhost:  "endhost"
@@ -61,18 +72,25 @@ SplitPos_sniext:   "sniext"
 # ═══════════════════════════════════════════════════════════════
 #  FOOLING (обманки) --dpi-desync-fooling
 # ═══════════════════════════════════════════════════════════════
-Fooling_none:      "none"
-Fooling_ts:        "ts"
-Fooling_badseq:    "badseq"
-Fooling_badsum:    "badsum"
-Fooling_md5sig:    "md5sig"
-Fooling_hopbyhop:  "hopbyhop"
-Fooling_hopbyhop2: "hopbyhop2"
-Fooling_destopt:   "destopt"
-Fooling_datanoack: "datanoack"
-Fooling_ts_badseq: "ts,badseq"
-Fooling_ts_md5sig: "ts,md5sig"
+Fooling_none:          "none"
+Fooling_ts:            "ts"
+Fooling_badseq:        "badseq"
+Fooling_badsum:        "badsum"
+Fooling_md5sig:        "md5sig"
+Fooling_hopbyhop:      "hopbyhop"
+Fooling_hopbyhop2:     "hopbyhop2"
+Fooling_destopt:       "destopt"
+Fooling_datanoack:     "datanoack"
+Fooling_ts_badseq:     "ts,badseq"
+Fooling_ts_md5sig:     "ts,md5sig"
 Fooling_badseq_md5sig: "badseq,md5sig"
+
+# ─── v72.1+ ───
+Fooling_tcp_ts_up:     "tcp_ts_up"
+Fooling_tls13:         "tls13"
+Fooling_ts_tls13:      "ts,tls13"
+Fooling_badseq_tls13:  "badseq,tls13"
+Fooling_datanoack_tls13: "datanoack,tls13"
 
 # ═══════════════════════════════════════════════════════════════
 #  AUTOTTL --dpi-desync-autottl
@@ -106,16 +124,17 @@ Repeats_12: "12"
 # ═══════════════════════════════════════════════════════════════
 #  CUTOFF --dpi-desync-cutoff
 # ═══════════════════════════════════════════════════════════════
-Cutoff_n1:   "n1"
-Cutoff_n2:   "n2"
-Cutoff_n3:   "n3"
-Cutoff_n4:   "n4"
-Cutoff_n6:   "n6"
-Cutoff_n8:   "n8"
-Cutoff_n10:  "n10"
+Cutoff_n1:    "n1"
+Cutoff_n2:    "n2"
+Cutoff_n3:    "n3"
+Cutoff_n4:    "n4"
+Cutoff_n6:    "n6"
+Cutoff_n8:    "n8"
+Cutoff_n10:   "n10"
 Cutoff_d512:  "d512"
 Cutoff_d1024: "d1024"
 Cutoff_d2048: "d2048"
+Cutoff_d4096: "d4096"
 
 # ═══════════════════════════════════════════════════════════════
 #  START --dpi-desync-start
@@ -125,6 +144,7 @@ Start_n2:   "n2"
 Start_n4:   "n4"
 Start_d1:   "d1"
 Start_d2:   "d2"
+Start_d4:   "d4"
 
 # ═══════════════════════════════════════════════════════════════
 #  SPLIT-SEQOVL
@@ -139,12 +159,13 @@ SplitSeqovlPattern_STUN:   "stun2.bin"
 SplitSeqovlPattern_MaxRu:  "tls_clienthello_max_ru.bin"
 
 # ═══════════════════════════════════════════════════════════════
-#  HOSTFAKESPLIT
+#  HOSTFAKESPLIT (v72+)
 # ═══════════════════════════════════════════════════════════════
 Hostfakesplit_Host_Google:  "host=www.google.com"
 Hostfakesplit_Host_Ya:      "host=ya.ru"
 Hostfakesplit_Host_Discord: "host=discord.com"
-Hostfakesplit_AltOrder:     "altorder=1"
+Hostfakesplit_AltOrder_0:   "altorder=0"
+Hostfakesplit_AltOrder_1:   "altorder=1"
 
 # ═══════════════════════════════════════════════════════════════
 #  FAKEDSPLIT PATTERNS
@@ -154,6 +175,11 @@ FakedsplitPattern_0x16: "0x16"
 FakedsplitPattern_0x01: "0x01"
 
 # ═══════════════════════════════════════════════════════════════
+#  FAKE TCP MOD (v72+) --dpi-desync-fake-tcp-mod
+# ═══════════════════════════════════════════════════════════════
+FakeTcpMod_seq: "seq"
+
+# ═══════════════════════════════════════════════════════════════
 #  TCP FLAGS --dpi-desync-tcp-flags-set / --dpi-desync-tcp-flags-unset
 # ═══════════════════════════════════════════════════════════════
 TcpFlagsSet_SYN:   "SYN"
@@ -161,15 +187,80 @@ TcpFlagsSet_RST:   "RST"
 TcpFlagsSet_ACK:   "ACK"
 TcpFlagsSet_PSH:   "PSH"
 TcpFlagsSet_FIN:   "FIN"
+TcpFlagsSet_URG:   "URG"
+TcpFlagsSet_ECE:   "ECE"
+TcpFlagsSet_CWR:   "CWR"
+TcpFlagsSet_AE:    "AE"
+TcpFlagsSet_SYN_ACK: "SYN,ACK"
+TcpFlagsSet_ACK_PSH: "ACK,PSH"
+TcpFlagsSet_FIN_ACK: "FIN,ACK"
 TcpFlagsUnset_ACK: "ACK"
 TcpFlagsUnset_SYN: "SYN"
 TcpFlagsUnset_PSH: "PSH"
+TcpFlagsUnset_RST: "RST"
+TcpFlagsUnset_FIN: "FIN"
+TcpFlagsUnset_URG: "URG"
+
+# ═══════════════════════════════════════════════════════════════
+#  ORIG TCP FLAGS (v72.2+) — для --orig-tcp-flags-set/unset
+# ═══════════════════════════════════════════════════════════════
+OrigTcpFlagsSet_SYN:    "SYN"
+OrigTcpFlagsSet_ACK:    "ACK"
+OrigTcpFlagsSet_PSH:    "PSH"
+OrigTcpFlagsSet_SYN_ACK: "SYN,ACK"
+OrigTcpFlagsSet_none:   "none"
+OrigTcpFlagsUnset_ACK:  "ACK"
+OrigTcpFlagsUnset_PSH:  "PSH"
+OrigTcpFlagsUnset_SYN:  "SYN"
+OrigTcpFlagsUnset_none: "none"
+
+# ═══════════════════════════════════════════════════════════════
+#  DUP TCP FLAGS (v72.2+) — для --dup-tcp-flags-set/unset
+# ═══════════════════════════════════════════════════════════════
+DupTcpFlagsSet_SYN:    "SYN"
+DupTcpFlagsSet_ACK:    "ACK"
+DupTcpFlagsSet_PSH:    "PSH"
+DupTcpFlagsSet_SYN_ACK: "SYN,ACK"
+DupTcpFlagsSet_none:   "none"
+DupTcpFlagsUnset_ACK:  "ACK"
+DupTcpFlagsUnset_PSH:  "PSH"
+DupTcpFlagsUnset_SYN:  "SYN"
+DupTcpFlagsUnset_none: "none"
+
+# ═══════════════════════════════════════════════════════════════
+#  IP-ID (v72.1+) — --ip-id
+# ═══════════════════════════════════════════════════════════════
+IpId_seq:      "seq"       # ✅ ДЕФОЛТ v72.1+ (пробивает googlevideo на fakedsplit)
+IpId_seqgroup: "seqgroup"  # ⚠️ УСТАРЕВШАЯ схема, ломает обход googlevideo
+IpId_rnd:      "rnd"
+IpId_zero:     "zero"
 
 # ═══════════════════════════════════════════════════════════════
 #  ANY-PROTOCOL --dpi-desync-any-protocol
 # ═══════════════════════════════════════════════════════════════
 AnyProtocol_0: "0"
 AnyProtocol_1: "1"
+
+# ═══════════════════════════════════════════════════════════════
+#  WSSIZE --dpi-desync-wssize
+# ═══════════════════════════════════════════════════════════════
+Wssize_64:   "64"
+Wssize_128:  "128"
+Wssize_256:  "256"
+Wssize_512:  "512"
+Wssize_1024: "1024"
+
+# ─── v72.2+: --wssize-forced-cutoff=0 ───
+WssizeForcedCutoff_0: "0"
+
+# ═══════════════════════════════════════════════════════════════
+#  FAKE TLS MOD (v72+) — --dpi-desync-fake-tls-mod
+# ═══════════════════════════════════════════════════════════════
+FakeTLSMod_rnd:         "rnd"
+FakeTLSMod_rndsni:      "rndsni"
+FakeTLSMod_sni:         "sni=www.google.com"
+FakeTLSMod_dupsid:      "dupsid"
+FakeTLSMod_none:        ""
 
 # ═══════════════════════════════════════════════════════════════
 #  WINDIVERT ФИЛЬТРЫ
@@ -182,3 +273,11 @@ WfL3:                "ipv4"
 UseIpsetExclude:     "True"
 UseHostlistExclude:  "True"
 #Debug: "False"
+
+# ═══════════════════════════════════════════════════════════════
+#  RAWS (WinDivert filter для --wf-raw-part, v72+)
+# ═══════════════════════════════════════════════════════════════
+WfRawPart_QUIC:      "udp.DstPort == 443"
+WfRawPart_STUN:      "udp.DstPort == 3478 or udp.DstPort == 5349"
+WfRawPart_WireGuard: "udp.DstPort == 51820"
+WfRawPart_Discord:   "udp.DstPort >= 50000 and udp.DstPort <= 50100"

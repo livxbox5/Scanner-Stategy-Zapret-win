@@ -2,116 +2,162 @@
 #  Zapret Manager 2 — methods.yml
 # ===============================================================
 #  Полный список методов --lua-desync для zapret2 / winws2.
-#  Источник: zapret-antidpi.lua + zapret-lib.lua + zapret-auto.lua.
+#  Источник: zapret-antidpi.lua, zapret-lib.lua, zapret-auto.lua,
+#            docs/manual.md (bol-van/zapret2).
+#  Актуально для zapret2 v0.9.5+
 # ===============================================================
 
 # ═══════════════════════════════════════════════════════════════
 #  LUA-МЕТОДЫ (--lua-desync=...)
 # ═══════════════════════════════════════════════════════════════
 
-# --- Активные методы (участвуют в генерации) ---
-LuaMethod_fake:           "fake"
-LuaMethod_multisplit:     "multisplit"
-LuaMethod_multidisorder:  "multidisorder"
-LuaMethod_fakeddisorder:  "fakeddisorder"
-LuaMethod_hostfakesplit:  "hostfakesplit"
-LuaMethod_syndata:        "syndata"
-LuaMethod_rst:            "rst"
-LuaMethod_rstack:         "rstack"
+# --- Основные методы (--lua-desync) ---
+LuaMethod_fake:                   "fake"
+LuaMethod_multisplit:             "multisplit"
+LuaMethod_multidisorder:          "multidisorder"
+LuaMethod_fakeddisorder:          "fakeddisorder"
+LuaMethod_hostfakesplit:          "hostfakesplit"
+LuaMethod_syndata:                "syndata"
+LuaMethod_fakedsplit:             "fakedsplit"
+LuaMethod_tcpseg:                 "tcpseg"
+LuaMethod_rst:                    "rst"
+LuaMethod_rstack:                 "rstack"
 LuaMethod_tls_client_hello_clone: "tls_client_hello_clone"
-LuaMethod_http_hostcase:  "http_hostcase"
-LuaMethod_http_domcase:   "http_domcase"
+LuaMethod_oob:                    "oob"
+LuaMethod_synhide:                "synhide"
+LuaMethod_wsize:                  "wsize"
+LuaMethod_wssize:                 "wssize"
+LuaMethod_udplen:                 "udplen"
+LuaMethod_ipfrag:                 "ipfrag"
+LuaMethod_ipfrag2:                "ipfrag2"
+LuaMethod_drop:                   "drop"
+LuaMethod_send:                   "send"
+LuaMethod_pktmod:                 "pktmod"
+LuaMethod_pass:                   "pass"
+LuaMethod_luaexec:                "luaexec"
 
-# --- Базовые операции ---
-# LuaMethod_pass:              "pass"
-# LuaMethod_drop:              "drop"
-# LuaMethod_send:              "send"
-# LuaMethod_pktmod:            "pktmod"
-# LuaMethod_rst_flood:         "rst_flood"
+# --- HTTP-специфичные методы ---
+LuaMethod_http_hostcase:          "http_hostcase"
+LuaMethod_http_domcase:           "http_domcase"
+LuaMethod_http_methodeol:         "http_methodeol"
+LuaMethod_http_unixeol:           "http_unixeol"
 
-# --- TCP-сегментация и фрагментация ---
-# LuaMethod_multidisorder_legacy: "multidisorder_legacy"
-# LuaMethod_fakedsplit:        "fakedsplit"
-# LuaMethod_tcpseg:            "tcpseg"
-# LuaMethod_oob:               "oob"
-# LuaMethod_synack:            "synack"
-# LuaMethod_synack_split:      "synack_split"
-# LuaMethod_wsize:             "wsize"
-# LuaMethod_wssize:            "wssize"
-# LuaMethod_udplen:            "udplen"
-# LuaMethod_dht_dn:            "dht_dn"
+# --- Методы для серверной стороны / SYN-ACK ---
+LuaMethod_synack:                 "synack"
+LuaMethod_synack_split:           "synack_split"
 
-# --- HTTP-специфичные ---
-# LuaMethod_http_methodeol:    "http_methodeol"
-# LuaMethod_http_unixeol:      "http_unixeol"
-
-# --- Модификация протоколов / фрагментация ---
-# LuaMethod_ipfrag:            "ipfrag"
-# LuaMethod_ipfrag2:           "ipfrag2"
-# LuaMethod_synhide:           "synhide"
-
-# --- Специальные ---
-# LuaMethod_luaexec:           "luaexec"
+# --- DHT (BitTorrent) ---
+LuaMethod_dht_dn:                 "dht_dn"
 
 # --- Оркестраторы (zapret-auto.lua) ---
-# LuaMethod_circular:          "circular"
-# LuaMethod_repeater:          "repeater"
-# LuaMethod_condition:         "condition"
-# LuaMethod_stopif:            "stopif"
-# LuaMethod_per_instance_condition: "per_instance_condition"
+LuaMethod_circular:               "circular"
+LuaMethod_repeater:               "repeater"
+LuaMethod_condition:              "condition"
+LuaMethod_stopif:                 "stopif"
+LuaMethod_per_instance_condition: "per_instance_condition"
+
+# --- Отладочные функции (zapret-lib.lua) ---
+LuaMethod_pktdebug:               "pktdebug"
+LuaMethod_argdebug:               "argdebug"
+LuaMethod_posdebug:               "posdebug"
+
 
 # ═══════════════════════════════════════════════════════════════
-#  BLOB-ФАЙЛЫ (LuaBlobFile_*)
+#  BLOB-ФАЙЛЫ (LuaBlobFile_*) — ссылки на файлы в BinPath
 # ═══════════════════════════════════════════════════════════════
 
-LuaBlobFile_tls_google:    "tls_clienthello_www_google_com.bin"
-LuaBlobFile_tls_max:       "tls_clienthello_max_ru.bin"
-LuaBlobFile_quic_google:   "quic_initial_www_google_com.bin"
-LuaBlobFile_quic_rutube:   "quic_initial_rutube_ru.bin"
-LuaBlobFile_stun:          "stun.bin"
+# --- TLS ClientHello ---
+LuaBlobFile_tls_google:            "tls_clienthello_www_google_com.bin"
+LuaBlobFile_tls_max:               "tls_clienthello_max_ru.bin"
+LuaBlobFile_tls_4pda:              "tls_clienthello_4pda_to.bin"
+LuaBlobFile_tls_5ka:               "tls_clienthello_5ka_ru.bin"
+LuaBlobFile_tls_sferum:            "tls_clienthello_www_sferum_ru.bin"
+LuaBlobFile_tls_vk:                "tls_clienthello_vk_com.bin"
+LuaBlobFile_tls_gosuslugi:         "tls_clienthello_gosuslugi_ru.bin"
+LuaBlobFile_tls_sberbank:          "tls_clienthello_sberbank_ru.bin"
+LuaBlobFile_tls_iana:              "tls_clienthello_iana_org.bin"
+LuaBlobFile_tls_iana_big:          "tls_clienthello_iana_org_bigsize.bin"
+LuaBlobFile_tls_google_tlsrec:     "tls_clienthello_google_com_tlsrec.bin"
+LuaBlobFile_tls_rutracker_kyber:   "tls_clienthello_rutracker_org_kyber.bin"
+LuaBlobFile_tls_vk_kyber:          "tls_clienthello_vk_com_kyber.bin"
+LuaBlobFile_tls_sochi_park:        "tls_clienthello_sochi_park.bin"
 
-# --- Новые blob-файлы (zapret2 v0.9.5) ---
-LuaBlobFile_tls_alert:     "tls_alert.bin"
-LuaBlobFile_dns:           "dns.bin"
-LuaBlobFile_sip_register:  "sip_register.bin"
-LuaBlobFile_dtls_serverhello: "dtls_serverhello.bin"
+# --- QUIC Initial ---
+LuaBlobFile_quic_google:           "quic_initial_www_google_com.bin"
+LuaBlobFile_quic_rutube:           "quic_initial_rutube_ru.bin"
+LuaBlobFile_quic_4pda:             "quic_initial_4pda_to.bin"
+LuaBlobFile_quic_5ka:              "quic_initial_5ka_ru.bin"
+LuaBlobFile_quic_tencent:          "quic_initial_tencent_com.bin"
+LuaBlobFile_quic_steam:            "quic_initial_steamcommunity_com.bin"
+LuaBlobFile_quic_facebook:         "quic_initial_facebook_com.bin"
+LuaBlobFile_quic_facebook_quiche:  "quic_initial_facebook_com_quiche.bin"
+LuaBlobFile_quic_vk:               "quic_initial_vk_com.bin"
+LuaBlobFile_quic_rutracker:        "quic_initial_rutracker_org.bin"
+LuaBlobFile_quic_rutracker_kyber1: "quic_initial_rutracker_org_kyber_1.bin"
+LuaBlobFile_quic_rutracker_kyber2: "quic_initial_rutracker_org_kyber_2.bin"
+LuaBlobFile_quic2_example:         "quic2_example_com.bin"
+LuaBlobFile_quic_short_header:     "quic_short_header.bin"
+LuaBlobFile_quic_googlevideo_kyber_1: "quic_initial_rr1---sn-xguxaxjvh-n8me_googlevideo_com_kyber_1.bin"
+LuaBlobFile_quic_googlevideo_kyber_2: "quic_initial_rr1---sn-xguxaxjvh-n8me_googlevideo_com_kyber_2.bin"
+LuaBlobFile_quic_googlevideo_o8ge:    "quic_initial_rr2---sn-gvnuxaxjvh-o8ge_googlevideo_com.bin"
 
-# --- Раскомментируй нужные ---
-# LuaBlobFile_tls_4pda:    "tls_clienthello_4pda_to.bin"
-# LuaBlobFile_tls_5ka:     "tls_clienthello_5ka_ru.bin"
-# LuaBlobFile_tls_sferum:  "tls_clienthello_www_sferum_ru.bin"
-# LuaBlobFile_quic_4pda:   "quic_initial_4pda_to.bin"
-# LuaBlobFile_quic_5ka:    "quic_initial_5ka_ru.bin"
-# LuaBlobFile_quic_tencent:"quic_initial_tencent_com.bin"
-# LuaBlobFile_quic_steam:  "quic_initial_steamcommunity_com.bin"
-# LuaBlobFile_stun2:       "stun2.bin"
-# LuaBlobFile_http_iana:   "http_iana_org.bin"
-# LuaBlobFile_zero:        "zero_512.bin"
-# LuaBlobFile_discord_udp: "ACTIVE_DISCORD_UDP.bin"
-# LuaBlobFile_game_udp:    "ACTIVE_GAME_UDP.bin"
+# --- STUN / WebRTC ---
+LuaBlobFile_stun:                  "stun.bin"
+LuaBlobFile_stun2:                 "stun2.bin"
+
+# --- Другие протоколы ---
+LuaBlobFile_tls_alert:             "tls_alert.bin"
+LuaBlobFile_dns:                   "dns.bin"
+LuaBlobFile_sip_register:          "sip_register.bin"
+LuaBlobFile_dtls_serverhello:      "dtls_serverhello.bin"
+LuaBlobFile_http_iana:             "http_iana_org.bin"
+LuaBlobFile_zero:                  "zero_512.bin"
+LuaBlobFile_zero256:               "zero_256.bin"
+LuaBlobFile_dht_get_peers:         "dht_get_peers.bin"
+LuaBlobFile_dht_find_node:         "dht_find_node.bin"
+LuaBlobFile_wireguard_initiation:  "wireguard_initiation.bin"
+LuaBlobFile_wireguard_response:    "wireguard_response.bin"
+LuaBlobFile_discord_ip_with_port:  "discord-ip-discovery-with-port.bin"
+LuaBlobFile_discord_ip_without_port: "discord-ip-discovery-without-port.bin"
+LuaBlobFile_rdp:                   "rdp.bin"
+LuaBlobFile_ntp4:                  "ntp4.bin"
+LuaBlobFile_bgp_open:              "bgp_open.bin"
+LuaBlobFile_bitcoin:               "bitcoin.bin"
+LuaBlobFile_smtp_ehlo:             "smtp_ehlo.bin"
+
+# --- Discord / Game UDP ---
+LuaBlobFile_ACTIVE_DISCORD_UDP:    "ACTIVE_DISCORD_UDP.bin"
+LuaBlobFile_ACTIVE_GAME_UDP:       "ACTIVE_GAME_UDP.bin"
+
 
 # ═══════════════════════════════════════════════════════════════
 #  FOOLING-ПАРАМЕТРЫ (LuaFool_*)
 #  Добавляются в конец --lua-desync через ":"
 # ═══════════════════════════════════════════════════════════════
 
-# --- TTL ---
-LuaFool_ip_ttl:           "ip_ttl=3"
-LuaFool_ip_autottl:       "ip_autottl=3,1-10"
-LuaFool_ip6_ttl:          "ip6_ttl=3"
+# --- IP / IPv4 ---
+LuaFool_ip_ttl:            "ip_ttl=3"
+# LuaFool_ip_autottl:      "ip_autottl=3,1-10"      # конфликтует с ip_ttl
 
-# --- TCP параметры ---
-LuaFool_tcp_md5:          "tcp_md5"
-LuaFool_tcp_seq:          "tcp_seq=100000"
-LuaFool_tcp_ts:           "tcp_ts=-1000"
-LuaFool_tcp_ts_up:        "tcp_ts_up"
-LuaFool_tcp_nop_del:      "tcp_nop_del"
+# --- TCP ---
+# LuaFool_tcp_seq:         "tcp_seq=100000"
+# LuaFool_tcp_ack:         "tcp_ack=-66000"
+# LuaFool_tcp_ts:          "tcp_ts=-1000"
+# LuaFool_tcp_ts_up:       "tcp_ts_up"
+# LuaFool_tcp_md5:         "tcp_md5"
+# LuaFool_tcp_flags_set:   "tcp_flags_set=FIN,PSH"
+# LuaFool_tcp_flags_unset: "tcp_flags_unset=ACK"
 
-# --- Reconstruct ---
-LuaFool_badsum:           "badsum"
+# --- Reconstruct / Checksum ---
+# LuaFool_badsum:          "badsum"
 
 # --- Rawsend ---
-LuaFool_repeats:          "repeats=3"
+# LuaFool_repeats:         "repeats=3"
+
+# --- IP Fragment ---
+# LuaFool_ipfrag:          "ipfrag"
+# LuaFool_ipfrag_disorder: "ipfrag_disorder"
+
 
 # ═══════════════════════════════════════════════════════════════
 #  ГЛОБАЛЬНЫЕ ОПЦИИ (Glob_*)
@@ -120,6 +166,9 @@ LuaFool_repeats:          "repeats=3"
 # Glob_intercept:    "0"
 # Glob_qnum:         "200"
 # Glob_reasm:        "1"
+# Glob_reasm_max:    "1"
+# Glob_wf_raw_filter: "windivert.filter/part.txt"
+
 
 # ═══════════════════════════════════════════════════════════════
 #  ВСТРОЕННЫЕ BLOB'Ы (LuaBlob_*)

@@ -9,6 +9,7 @@
 #  Авто-подбор стратегии: пункт 28 в ZapretManager2.ps1.
 #
 #  Актуально для zapret2 (bol-van/zapret2, v0.9.5+).
+#  Добавлены новые blob-файлы и методы (QUIC, TLS, HTTP).
 # ===============================================================
 
 $script:ProviderPresets = @{
@@ -16,119 +17,169 @@ $script:ProviderPresets = @{
     'Rostelecom' = @{
         Patterns   = @('Rostelecom','Ростелеком','Rt\.ru','Rostelecom PJSC',
                        'Macroregional Branch South','Karachaevo-Cherkess')
-        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata','tls_client_hello_clone')
+        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata',
+                       'tls_client_hello_clone','oob','rst','rstack','tcpseg')
         Splits     = @('1','2','midsld','sniext+1','host','host+1','endhost')
         Repeats    = @('repeats=2','repeats=4','repeats=6')
         TlsMods    = @('rnd','rnd,rndsni','rnd,dupsid','sni=www.google.com')
         BlobFiles  = @(
             'tls_clienthello_www_google_com.bin',
             'tls_clienthello_max_ru.bin',
-            'quic_initial_rutube_ru.bin'
+            'quic_initial_rutube_ru.bin',
+            'quic_initial_rutracker_org.bin',
+            'quic_initial_facebook_com_quiche.bin',
+            'tls_clienthello_vk_com.bin'
         )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_www_google_com.bin, quic_initial_rutube_ru.bin'
-        Note       = 'Ростелеком (в т.ч. Юг): fake + multisplit, tls_mod=rnd,rndsni, repeats 2-6'
+        BlobHint   = 'tls_google, quic_rutube, quic_rutracker, quic_facebook_quiche, tls_vk'
+        Note       = 'Ростелеком (в т.ч. Юг): fake + multisplit, добавлены QUIC/TLS blob-файлы и новые методы'
     }
 
     'MTS' = @{
         Patterns   = @('MTS','МТС','Mobile TeleSystems','MTS PJSC')
-        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata')
+        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata',
+                       'oob','tcpseg','http_hostcase','http_domcase')
         Splits     = @('1','2','midsld','sniext+1')
         Repeats    = @('repeats=4','repeats=6','repeats=8')
         TlsMods    = @('rnd,rndsni','rnd,dupsid,rndsni','sni=www.google.com')
-        BlobFiles  = @('tls_clienthello_www_google_com.bin','quic_initial_www_google_com.bin')
+        BlobFiles  = @(
+            'tls_clienthello_www_google_com.bin',
+            'quic_initial_www_google_com.bin',
+            'quic_initial_facebook_com.bin',
+            'tls_clienthello_vk_com.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_www_google_com.bin, quic_initial_www_google_com.bin'
-        Note       = 'МТС: fake + multidisorder, tls_mod=rnd,rndsni'
+        BlobHint   = 'tls_google, quic_google, quic_facebook, tls_vk'
+        Note       = 'МТС: fake + multidisorder, добавлены HTTP-методы и QUIC blob-файлы'
     }
 
     'Beeline' = @{
         Patterns   = @('Beeline','Билайн','VimpelCom','Vimpel-Communications')
-        LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder','hostfakesplit','syndata')
+        LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder','hostfakesplit','syndata',
+                       'tls_client_hello_clone','oob','rst')
         Splits     = @('1','2','midsld','host')
         Repeats    = @('repeats=4','repeats=6')
         TlsMods    = @('rnd,dupsid','rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_4pda_to.bin','quic_initial_4pda_to.bin')
+        BlobFiles  = @(
+            'tls_clienthello_4pda_to.bin',
+            'quic_initial_4pda_to.bin',
+            'quic_initial_rutracker_org.bin',
+            'tls_clienthello_vk_com.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_4pda_to.bin, quic_initial_4pda_to.bin'
-        Note       = 'Билайн: multidisorder с tls_mod=rnd,dupsid'
+        BlobHint   = 'tls_4pda, quic_4pda, quic_rutracker, tls_vk'
+        Note       = 'Билайн: multidisorder с tls_mod=rnd,dupsid; добавлены QUIC/TLS blob-файлы'
     }
 
     'Megafon' = @{
         Patterns   = @('Megafon','Мегафон','MegaFon','MegaFon PJSC')
-        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata')
+        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata',
+                       'oob','tcpseg','http_methodeol','http_unixeol')
         Splits     = @('1','2','midsld','sniext+1')
         Repeats    = @('repeats=2','repeats=4','repeats=6')
         TlsMods    = @('sni=www.google.com','rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_5ka_ru.bin','quic_initial_5ka_ru.bin')
+        BlobFiles  = @(
+            'tls_clienthello_5ka_ru.bin',
+            'quic_initial_5ka_ru.bin',
+            'quic_initial_facebook_com.bin',
+            'tls_clienthello_max_ru.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_5ka_ru.bin, quic_initial_5ka_ru.bin'
-        Note       = 'Мегафон: fake + fakeddisorder, tls_mod=sni=www.google.com'
+        BlobHint   = 'tls_5ka, quic_5ka, quic_facebook, tls_max'
+        Note       = 'Мегафон: fake + fakeddisorder, добавлены HTTP EOL-методы и QUIC blob-файлы'
     }
 
     'ER-Telecom' = @{
         Patterns   = @('ER-Telecom','Дом\.ру','DOM\.RU','ER-Telecom Holding')
-        LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit')
+        LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit',
+                       'tls_client_hello_clone','rst','rstack','http_hostcase')
         Splits     = @('1','sniext+1','midsld')
         Repeats    = @('repeats=2','repeats=4')
         TlsMods    = @('rnd','rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_max_ru.bin','quic_initial_tencent_com.bin')
+        BlobFiles  = @(
+            'tls_clienthello_max_ru.bin',
+            'quic_initial_tencent_com.bin',
+            'quic_initial_rutracker_org.bin',
+            'tls_clienthello_vk_com.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_max_ru.bin, quic_initial_tencent_com.bin'
-        Note       = 'Дом.ру: fake + multisplit, pos=1,sniext+1'
+        BlobHint   = 'tls_max, quic_tencent, quic_rutracker, tls_vk'
+        Note       = 'Дом.ру: fake + multisplit, добавлены QUIC/TLS blob-файлы и новые методы'
     }
 
     'TTK' = @{
         Patterns   = @('TTK','ТТК','TransTeleCom','TransTelecom')
-        LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder')
+        LuaMethods = @('fake','multidisorder','multisplit','fakeddisorder',
+                       'oob','tcpseg','http_domcase')
         Splits     = @('1','2','midsld')
         Repeats    = @('repeats=4','repeats=6')
         TlsMods    = @('rnd','rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_www_sferum_ru.bin')
+        BlobFiles  = @(
+            'tls_clienthello_www_sferum_ru.bin',
+            'quic_initial_facebook_com.bin',
+            'tls_clienthello_vk_com.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_www_sferum_ru.bin'
-        Note       = 'ТТК: fake + multidisorder, repeats=4'
+        BlobHint   = 'tls_sferum, quic_facebook, tls_vk'
+        Note       = 'ТТК: fake + multidisorder, добавлены новые методы и blob-файлы'
     }
 
     'MGTS' = @{
         Patterns   = @('MGTS','МГТС','Moscow City Telephone')
-        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit')
+        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit',
+                       'http_hostcase','http_domcase','http_methodeol')
         Splits     = @('midsld','1','2')
         Repeats    = @('repeats=2','repeats=4')
         TlsMods    = @('rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_www_google_com.bin')
+        BlobFiles  = @(
+            'tls_clienthello_www_google_com.bin',
+            'quic_initial_www_google_com.bin',
+            'quic_initial_rutracker_org.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_www_google_com.bin'
-        Note       = 'МГТС: fake + multisplit, pos=midsld'
+        BlobHint   = 'tls_google, quic_google, quic_rutracker'
+        Note       = 'МГТС: fake + multisplit, добавлены HTTP-методы и QUIC blob-файлы'
     }
 
     'Tele2' = @{
         Patterns   = @('Tele2','Теле2','Tele2 Russia')
-        LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit')
+        LuaMethods = @('fake','multisplit','multidisorder','hostfakesplit',
+                       'tls_client_hello_clone','rst')
         Splits     = @('1','2','midsld')
         Repeats    = @('repeats=2','repeats=4')
         TlsMods    = @('rnd','rnd,rndsni')
-        BlobFiles  = @('quic_initial_steamcommunity_com.bin')
+        BlobFiles  = @(
+            'quic_initial_steamcommunity_com.bin',
+            'quic_initial_facebook_com.bin',
+            'tls_clienthello_vk_com.bin'
+        )
         Fool       = @()
-        BlobHint   = 'quic_initial_steamcommunity_com.bin'
-        Note       = 'Tele2: fake + multisplit, tls_mod=rnd'
+        BlobHint   = 'quic_steam, quic_facebook, tls_vk'
+        Note       = 'Tele2: fake + multisplit, добавлены QUIC/TLS blob-файлы'
     }
 
     'Yota' = @{
         Patterns   = @('Yota','Йота','Scartel')
-        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata')
+        LuaMethods = @('fake','multisplit','fakeddisorder','hostfakesplit','syndata',
+                       'oob','tcpseg','http_unixeol')
         Splits     = @('sniext+1','1','midsld')
         Repeats    = @('repeats=2','repeats=4')
         TlsMods    = @('rnd,rndsni')
-        BlobFiles  = @('tls_clienthello_4pda_to.bin')
+        BlobFiles  = @(
+            'tls_clienthello_4pda_to.bin',
+            'quic_initial_4pda_to.bin',
+            'quic_initial_rutracker_org.bin'
+        )
         Fool       = @()
-        BlobHint   = 'tls_clienthello_4pda_to.bin'
-        Note       = 'Yota: fake + fakeddisorder, pos=sniext+1'
+        BlobHint   = 'tls_4pda, quic_4pda, quic_rutracker'
+        Note       = 'Yota: fake + fakeddisorder, добавлены новые методы и QUIC blob-файлы'
     }
 
     'default' = @{
         Patterns   = @()
-        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata','tls_client_hello_clone','rst')
+        LuaMethods = @('fake','multisplit','multidisorder','fakeddisorder','hostfakesplit','syndata',
+                       'tls_client_hello_clone','rst','rstack','oob','tcpseg',
+                       'http_hostcase','http_domcase','http_methodeol','http_unixeol')
         Splits     = @('1','2','midsld','sniext+1','host','host+1','endhost','endhost-1',
                        'midsld-2','midsld+2','method+2',
                        '1,sniext+1,host+1,midsld-2,midsld,midsld+2,endhost-1')
@@ -138,7 +189,7 @@ $script:ProviderPresets = @{
         BlobFiles  = @()
         Fool       = @()
         BlobHint   = 'fake_default_tls, fake_default_quic'
-        Note       = 'Универсальный набор: полный перебор методов и blob-ов'
+        Note       = 'Универсальный набор: полный перебор методов, включая новые (oob, tcpseg, rst, HTTP-методы) и все blob-файлы'
     }
 }
 
@@ -438,7 +489,7 @@ function Build-ProviderCommand {
     }
     if (-not $blobKey) { $blobKey = 'tls_google' }
 
-    $blobDef = Get-Winws2BlobDefs
+    $blobDefs = Get-Winws2BlobDefs
 
     $hl = ""
     $he = ""
@@ -645,8 +696,6 @@ function Update-ProviderCache {
 # ═════════════════════════════════════════════════════════════
 #  Использует New-Winws2StrategyCandidates и Test-Strategy из winws2.ps1.
 #  Работает только если winws2 готов (Test-Winws2Ready).
-#
-#  Алгоритм аналогичен zapret1-версии, но с учётом Lua-стратегий.
 # ═════════════════════════════════════════════════════════════
 
 function Get-AutoTestDomains {
@@ -744,6 +793,50 @@ function Invoke-AutoStrategyFind {
                         Read-Host "  Enter..."
                         return [pscustomobject]@{ Method = "known"; Line = $s.Cmd; Score = $r.Score; Total = $r.Total }
                     }
+                }
+            }
+            Write-Host ""
+        }
+    }
+
+    # ─── Шаг 1.5: Проверка найденных в интернете ───
+    if (Get-Command Get-DiscoveredStrategies -ErrorAction SilentlyContinue) {
+        $discovered = @(Get-DiscoveredStrategies -UntestedOnly -Max 20 -Engine 'winws2')
+        if ($discovered.Count -gt 0) {
+            Write-Host ""
+            Write-Host ("  ─── Проверка {0} найденных в интернете ─────────────" -f $discovered.Count) -ForegroundColor DarkCyan
+            $di = 0
+            foreach ($d in $discovered) {
+                $di++
+                Write-Host ("    [{0}/{1}] {2}" -f $di, $discovered.Count, `
+                    $(if ($d.Candidate.Length -gt 90) { $d.Candidate.Substring(0,87) + "..." } else { $d.Candidate })) `
+                    -ForegroundColor DarkGray
+
+                $lineToTest = $d.Candidate
+                if ($d.Completeness -like '*fragment*' -and (Get-Command Add-Winws2Prelude -ErrorAction SilentlyContinue)) {
+                    $lineToTest = Add-Winws2Prelude -Line $lineToTest
+                }
+
+                $r = Test-Strategy -StrategyLine $lineToTest -Domains $TestDomains -Quiet
+                if ($r -and $r.Score -gt 0) {
+                    $pct = [math]::Round($r.Score / $r.Total * 100, 1)
+                    Write-Host ("        работает: {0}/{1} ({2}%)" -f $r.Score, $r.Total, $pct) -ForegroundColor Green
+
+                    Update-DiscoveredStrategyScore -Candidate $d.Candidate -Score $r.Score -Total $r.Total
+
+                    Save-ProviderStrategy -ProfileName $ProfileName `
+                        -Strategy $lineToTest -Score $r.Score -Total $r.Total
+
+                    if ($r.Score -eq $r.Total) {
+                        Write-Host "        [OK] Интернет-стратегия работает идеально!" -ForegroundColor Green
+                        Write-Host ""
+                        Write-Host ("  {0}" -f $lineToTest) -ForegroundColor White
+                        Write-Host ""
+                        Read-Host "  Enter..."
+                        return [pscustomobject]@{ Method = "discovered"; Line = $lineToTest; Score = $r.Score; Total = $r.Total }
+                    }
+                } else {
+                    Update-DiscoveredStrategyScore -Candidate $d.Candidate -Score 0 -Total $(if ($r) { $r.Total } else { 0 })
                 }
             }
             Write-Host ""

@@ -8,6 +8,7 @@
 #
 #  Обновлено для zapret v1 (актуальная документация bol-van/zapret):
 #    - Добавлены поля TcpFlagsSet, TcpFlagsUnset, AnyProtocol, Starts
+#    - Добавлены IpId, OrigTcpFlagsSet/Unset, DupTcpFlagsSet/Unset, WfRawPart
 # ===============================================================
 
 # === CONFIG PATH ===
@@ -50,6 +51,14 @@ $Global:ZapretState = @{
     TcpFlagsUnset     = @()
     AnyProtocol       = 0
     Starts            = @()
+
+    # ─── Новые параметры (v72+) ───
+    IpId              = @()        # значения для --ip-id (seq, rnd, zero)
+    OrigTcpFlagsSet   = @()        # --orig-tcp-flags-set
+    OrigTcpFlagsUnset = @()        # --orig-tcp-flags-unset
+    DupTcpFlagsSet    = @()        # --dup-tcp-flags-set
+    DupTcpFlagsUnset  = @()        # --dup-tcp-flags-unset
+    WfRawPart         = ""         # --wf-raw-part (строка или путь к файлу)
 
     # ─── Именованные Fake TLS ───
     FakeTLS_Google    = ""
@@ -321,6 +330,34 @@ function Load-Settings {
     $v = Get-YamlValue $data 'AnyProtocol'
     if ($null -ne $v) { $Global:ZapretState.AnyProtocol = ConvertTo-Int $v 0 }
 
+    # ─── Новые параметры v72+ ───
+    $Global:ZapretState.IpId              = @()
+    $Global:ZapretState.OrigTcpFlagsSet   = @()
+    $Global:ZapretState.OrigTcpFlagsUnset = @()
+    $Global:ZapretState.DupTcpFlagsSet    = @()
+    $Global:ZapretState.DupTcpFlagsUnset  = @()
+
+    foreach ($k in $data.Keys) {
+        $val = [string]$data[$k]
+        if ($k -match '^IpId_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.IpId += $val }
+        }
+        elseif ($k -match '^OrigTcpFlagsSet_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.OrigTcpFlagsSet += $val }
+        }
+        elseif ($k -match '^OrigTcpFlagsUnset_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.OrigTcpFlagsUnset += $val }
+        }
+        elseif ($k -match '^DupTcpFlagsSet_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.DupTcpFlagsSet += $val }
+        }
+        elseif ($k -match '^DupTcpFlagsUnset_(.+)$') {
+            if (-not [string]::IsNullOrWhiteSpace($val)) { $Global:ZapretState.DupTcpFlagsUnset += $val }
+        }
+    }
+    $v = Get-YamlValue $data 'WfRawPart'
+    if ($v) { $Global:ZapretState.WfRawPart = [string]$v }
+
     # ─── Именованные Fake* ───
     foreach ($pair in @(
         @('FakeTLS_Google',  'FakeTLS_Google'),
@@ -401,7 +438,7 @@ function Load-Settings {
     $v = Get-YamlValue $data 'DohTestDomain'
     if ($v) { $Global:ZapretState.DohTestDomain = [string]$v }
 
-    # ─── Дефолты ───
+    # ─── Дефолты (расширенные) ───
     if ($Global:ZapretState.Methods.Count -eq 0) {
         $Global:ZapretState.Methods = @("split2","disorder2","multisplit","multidisorder","fakedsplit")
     }
@@ -409,10 +446,13 @@ function Load-Settings {
         $Global:ZapretState.SplitPositions = @("1","2","midsld")
     }
     if ($Global:ZapretState.Foolings.Count -eq 0) {
-        $Global:ZapretState.Foolings = @("","md5sig","badseq")
+        $Global:ZapretState.Foolings = @("","md5sig","badseq","ts","badsum","datanoack","tcp_ts_up")
     }
     if ($Global:ZapretState.Autottls.Count -eq 0) {
         $Global:ZapretState.Autottls = @("","2","4")
+    }
+    if ($Global:ZapretState.IpId.Count -eq 0) {
+        $Global:ZapretState.IpId = @("seq") # безопасный дефолт для v72.1+
     }
 
     # ─── Отчёт ───
@@ -422,6 +462,10 @@ function Load-Settings {
     Write-Host ("  TcpFlagsSet={0} TcpFlagsUnset={1} AnyProtocol={2} Starts={3}" -f `
         $Global:ZapretState.TcpFlagsSet.Count, $Global:ZapretState.TcpFlagsUnset.Count, `
         $Global:ZapretState.AnyProtocol, $Global:ZapretState.Starts.Count) -ForegroundColor Gray
+    Write-Host ("  IpId={0} OrigTcpSet={1} DupTcpSet={2}" -f `
+        $Global:ZapretState.IpId.Count, `
+        $Global:ZapretState.OrigTcpFlagsSet.Count, `
+        $Global:ZapretState.DupTcpFlagsSet.Count) -ForegroundColor Gray
     Write-Host ("  Pools: TLS={0} QUIC={1} UDP={2}" -f `
         $Global:ZapretState.FakeTLSPool.Count, `
         $Global:ZapretState.FakeQUICPool.Count, `
@@ -449,7 +493,7 @@ function Save-Settings {
     if (Test-Path $file) {
         $raw = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8)
         foreach ($line in ($raw -split "`r?`n")) {
-            if ($line -match '^\s*#?\s*(Method_|SplitPos_|Fooling_|Autottl_|Repeats_|Cutoff_|FakeTLS_|FakeQUIC_|FakeUDP_|SplitSeqovl|Hostfakesplit_|FakedsplitPattern_|WfTcp|WfUdp|FilterL7|WfIface|WfL3|UseIpsetExclude|UseHostlistExclude|Debug|TcpFlagsSet_|TcpFlagsUnset_|Start_|AnyProtocol)') {
+            if ($line -match '^\s*#?\s*(Method_|SplitPos_|Fooling_|Autottl_|Repeats_|Cutoff_|FakeTLS_|FakeQUIC_|FakeUDP_|SplitSeqovl|Hostfakesplit_|FakedsplitPattern_|WfTcp|WfUdp|FilterL7|WfIface|WfL3|UseIpsetExclude|UseHostlistExclude|Debug|TcpFlagsSet_|TcpFlagsUnset_|Start_|AnyProtocol|IpId_|OrigTcpFlagsSet_|OrigTcpFlagsUnset_|DupTcpFlagsSet_|DupTcpFlagsUnset_)') {
                 $preserved += $line
             }
         }
@@ -485,6 +529,7 @@ function Save-Settings {
         UseFakeHTTP        = [string]$Global:ZapretState.UseFakeHTTP
         Hostlist           = [string]$Global:ZapretState.Hostlist
         HostlistExclude    = [string]$Global:ZapretState.HostlistExclude
+        WfRawPart          = [string]$Global:ZapretState.WfRawPart
     }
 
     $yaml = ConvertTo-SimpleYaml $hash
@@ -495,6 +540,25 @@ function Save-Settings {
         $yaml2 += ($preserved -join "`r`n") + "`r`n"
         Add-Content -Path $file -Value $yaml2 -Encoding UTF8
     }
+
+    # ─── Новые блоки: IpId, TCP-флаги ───
+    $newBlock  = "`r`n# === NEW PARAMETERS (v72+) ===`r`n"
+    foreach ($id in $Global:ZapretState.IpId) {
+        $newBlock += ("IpId_{0}: `"{1}`"`r`n" -f [guid]::NewGuid().ToString('N').Substring(0,6), $id)
+    }
+    foreach ($f in $Global:ZapretState.OrigTcpFlagsSet) {
+        $newBlock += ("OrigTcpFlagsSet_{0}: `"{1}`"`r`n" -f [guid]::NewGuid().ToString('N').Substring(0,6), $f)
+    }
+    foreach ($f in $Global:ZapretState.OrigTcpFlagsUnset) {
+        $newBlock += ("OrigTcpFlagsUnset_{0}: `"{1}`"`r`n" -f [guid]::NewGuid().ToString('N').Substring(0,6), $f)
+    }
+    foreach ($f in $Global:ZapretState.DupTcpFlagsSet) {
+        $newBlock += ("DupTcpFlagsSet_{0}: `"{1}`"`r`n" -f [guid]::NewGuid().ToString('N').Substring(0,6), $f)
+    }
+    foreach ($f in $Global:ZapretState.DupTcpFlagsUnset) {
+        $newBlock += ("DupTcpFlagsUnset_{0}: `"{1}`"`r`n" -f [guid]::NewGuid().ToString('N').Substring(0,6), $f)
+    }
+    Add-Content -Path $file -Value $newBlock -Encoding UTF8
 
     $dnsBlock  = "`r`n# === DNS SERVERS (UDP) ===`r`n"
     $dnsBlock += ("DnsTestDomain: `"$($Global:ZapretState.DnsTestDomain)`"`r`n")

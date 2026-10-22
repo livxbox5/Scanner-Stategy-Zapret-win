@@ -7,6 +7,50 @@
 #    # === SHOW-TXTCONTENT ===  показать содержимое .txt-файла
 # ===============================================================
 
+# === SHOW-TXTCONTENT ===
+#  Показывает содержимое .txt-файла (первые N строк).
+#  Вызывается из Find-AllFiles при -ShowContent.
+function Show-TxtContent {
+    param(
+        [string]$FilePath,
+        [int]$MaxLines = 50
+    )
+
+    if (-not $FilePath -or -not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        Write-Host ("  [!] Файл не найден: {0}" -f $FilePath) -ForegroundColor Yellow
+        return
+    }
+
+    $info = Get-Item -LiteralPath $FilePath
+    Write-Host ""
+    Write-Host ("  ─── {0}  ({1} B) ───" -f $info.Name, $info.Length) -ForegroundColor Cyan
+
+    try {
+        $lines = @(Get-Content -LiteralPath $FilePath -ErrorAction Stop)
+    } catch {
+        Write-Host ("  [!] Ошибка чтения: {0}" -f $_.Exception.Message) -ForegroundColor Red
+        return
+    }
+
+    if ($lines.Count -eq 0) {
+        Write-Host "  <пусто>" -ForegroundColor DarkGray
+        return
+    }
+
+    $show = [Math]::Min($MaxLines, $lines.Count)
+    for ($i = 0; $i -lt $show; $i++) {
+        $l = $lines[$i]
+        $col = if ($l -match '^\s*#') { "DarkGray" }
+               elseif ($l -match '^\s*$') { "Black" }
+               else { "White" }
+        Write-Host ("  {0,4}: {1}" -f ($i + 1), $l) -ForegroundColor $col
+    }
+
+    if ($lines.Count -gt $show) {
+        Write-Host ("  ... ещё {0} строк" -f ($lines.Count - $show)) -ForegroundColor DarkGray
+    }
+}
+
 # === FIND-ALLFILES === 
 function Find-AllFiles {
     param(
